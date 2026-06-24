@@ -88,7 +88,8 @@ export class Player {
   _updateCube(dt, input) {
     this.vy += -this.gravDir * P.cube.grav * dt;
     this.vy = clamp(this.vy, -28, 28);
-    if (this.onGround && input.held) {
+    // Salta con tap (flanco) o manteniendo pulsado (multi-salto al aterrizar).
+    if (this.onGround && (input.held || input.pressed)) {
       this.vy = P.cube.jump * this.gravDir;
       this.onGround = false;
     }

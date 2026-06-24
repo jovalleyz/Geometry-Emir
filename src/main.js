@@ -43,6 +43,7 @@ const ctl = {
     currentLevel = LEVELS_BY_ID[id];
     practice = !!opts.practice;
     audio.resume();
+    goImmersive(); // pantalla completa + landscape en móvil
     game.loadLevel(currentLevel, { practice, iconColor: '#00FFCC', iconColor2: '#FF00AA' });
     ui.showHUD({ ...currentLevel, practice });
     ui.setCoins(0, totalCoins(currentLevel));
@@ -53,7 +54,8 @@ const ctl = {
   resume() { ui.closePause(); game.resume(); },
   retry() { ui.closePause(); game.attempts = 0; game._lastCheckpoint = null; ui.showHUD({ ...currentLevel, practice }); ui.setCoins(0, totalCoins(currentLevel)); game.retry(); },
   togglePractice() { ctl.startLevel(currentLevel.id, { practice: !practice }); },
-  exitToMenu() { game.stop(); ui.showMenu(); },
+  exitToMenu() { game.stop(); menuMusic(); ui.showMenu(); },
+  fullscreen() { goImmersive(true); },
   nextLevel(id) {
     const idx = LEVELS.findIndex((l) => l.id === id);
     if (idx < LEVELS.length - 1) ctl.startLevel(LEVELS[idx + 1].id, { practice: false });
@@ -62,6 +64,18 @@ const ctl = {
 };
 
 const ui = new UI(uiRoot, ctl);
+
+// Modo inmersivo: pantalla completa + bloqueo a horizontal (best-effort).
+function isTouch() { return window.matchMedia('(pointer: coarse)').matches; }
+function goImmersive(force = false) {
+  if (!force && !isTouch()) return;
+  const el = document.documentElement;
+  if (!document.fullscreenElement) {
+    const req = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (req) { try { Promise.resolve(req.call(el)).catch(() => {}); } catch { /* noop */ } }
+  }
+  try { screen.orientation?.lock?.('landscape').catch(() => {}); } catch { /* no soportado */ }
+}
 
 // Pausa con teclado.
 input.onPause = () => {
@@ -92,8 +106,9 @@ loop.start();
 // Hook de depuración / testing.
 window.__GE = { game, ctl, LEVELS };
 
-// --- Audio: desbloquear en el primer gesto ---
-const unlock = () => { audio.resume(); window.removeEventListener('pointerdown', unlock); window.removeEventListener('keydown', unlock); };
+// --- Música de menú / desbloqueo de audio en el primer gesto ---
+function menuMusic() { if (game.state === 'idle') audio.startMusic({ bpm: 120, track: '/audio/track-menu.ogg' }); }
+const unlock = () => { audio.resume(); menuMusic(); window.removeEventListener('pointerdown', unlock); window.removeEventListener('keydown', unlock); };
 window.addEventListener('pointerdown', unlock);
 window.addEventListener('keydown', unlock);
 
@@ -101,7 +116,7 @@ window.addEventListener('keydown', unlock);
 let booted = false;
 onAuth(() => {
   if (!booted) { booted = true; ui.showMenu(); }
-  else if (game.state === 'idle') ui.showMenu(); // refresca el menú al iniciar/cerrar sesión
+  else if (game.state === 'idle' && ui.current === 'menu') ui.showMenu(); // refresca solo si está en el menú
 });
 // Fallback por si auth tarda.
 setTimeout(() => { if (!booted) { booted = true; ui.showMenu(); } }, 1500);

@@ -35,6 +35,16 @@ export default defineConfig({
             handler: 'CacheFirst',
             options: { cacheName: 'google-fonts', expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 365 } },
           },
+          {
+            urlPattern: ({ url }) => url.pathname.startsWith('/audio/') || url.pathname.endsWith('.ogg'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'geoemir-audio',
+              expiration: { maxEntries: 12, maxAgeSeconds: 60 * 60 * 24 * 60 },
+              cacheableResponse: { statuses: [0, 200] },
+              rangeRequests: true,
+            },
+          },
         ],
       },
     }),

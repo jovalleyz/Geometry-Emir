@@ -34,6 +34,14 @@ export class AudioManager {
     this.beatTime = 0;       // timestamp del último beat (para pulso visual)
     this.onBeat = null;
     this.seed = 1;
+
+    // Reproducción de tracks reales.
+    this.mode = 'procedural';   // 'track' | 'procedural'
+    this._buffers = new Map();  // url -> AudioBuffer (cache)
+    this.trackSource = null;
+    this.analyser = null;
+    this._beatRaf = null;
+    this._musicToken = 0;
   }
 
   _ensure() {
@@ -69,9 +77,27 @@ export class AudioManager {
     return this.seed / 0x7fffffff;
   }
 
-  startMusic({ bpm = 140, scale = 'minor', root = 45, seed = 1 } = {}) {
+  // Punto de entrada: reproduce un track real si se indica `track`, si no
+  // recurre al sintetizador procedural (también si el track falla en cargar).
+  startMusic({ bpm = 140, scale = 'minor', root = 45, seed = 1, track = null } = {}) {
     this._ensure();
     this.resume();
+    this.bpm = bpm;
+    this._musicToken += 1;
+    const token = this._musicToken;
+    this.stopMusic();
+    if (track) {
+      this._playTrack(track, token).catch((e) => {
+        console.warn('Track no disponible, usando audio procedural:', e?.message || e);
+        if (this._musicToken === token) this.startProcedural({ bpm, scale, root, seed });
+      });
+    } else {
+      this.startProcedural({ bpm, scale, root, seed });
+    }
+  }
+
+  startProcedural({ bpm = 140, scale = 'minor', root = 45, seed = 1 } = {}) {
+    this.mode = 'procedural';
     this.bpm = bpm;
     this.scale = SCALES[scale] || SCALES.minor;
     this.rootMidi = root;
@@ -83,9 +109,52 @@ export class AudioManager {
     this._scheduler();
   }
 
+  async _playTrack(url, token) {
+    let buf = this._buffers.get(url);
+    if (!buf) {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const arr = await res.arrayBuffer();
+      buf = await this.ctx.decodeAudioData(arr);
+      this._buffers.set(url, buf);
+    }
+    if (this._musicToken !== token) return; // se pidió otra cosa mientras cargaba
+    this.mode = 'track';
+    this.playing = true;
+    const src = this.ctx.createBufferSource();
+    src.buffer = buf;
+    src.loop = true;
+    this.analyser = this.ctx.createAnalyser();
+    this.analyser.fftSize = 1024;
+    src.connect(this.analyser);
+    this.analyser.connect(this.musicGain);
+    src.start(0);
+    this.trackSource = src;
+    this._startBeatDetect();
+  }
+
+  // Detección de beats por energía de graves -> pulso visual sincronizado a cualquier track.
+  _startBeatDetect() {
+    const data = new Uint8Array(this.analyser.frequencyBinCount);
+    let avg = 0, last = 0;
+    const tick = () => {
+      if (this.mode !== 'track' || !this.analyser) return;
+      this.analyser.getByteFrequencyData(data);
+      let e = 0; for (let i = 1; i < 10; i++) e += data[i]; e /= 9;
+      avg = avg * 0.92 + e * 0.08;
+      const now = performance.now();
+      if (e > avg * 1.22 && e > 38 && now - last > 210) { last = now; this.beatTime = now; this.onBeat?.(); }
+      this._beatRaf = requestAnimationFrame(tick);
+    };
+    this._beatRaf = requestAnimationFrame(tick);
+  }
+
   stopMusic() {
     this.playing = false;
     if (this._timer) { clearTimeout(this._timer); this._timer = null; }
+    if (this._beatRaf) { cancelAnimationFrame(this._beatRaf); this._beatRaf = null; }
+    if (this.trackSource) { try { this.trackSource.stop(); } catch { /* ya parado */ } this.trackSource.disconnect(); this.trackSource = null; }
+    this.analyser = null;
   }
 
   _buildPatterns() {

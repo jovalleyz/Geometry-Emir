@@ -7,6 +7,7 @@ export class UI {
     this.root = root;
     this.ctl = ctl;            // controlador inyectado desde main.js
     this.hudRefs = null;
+    this.current = null;       // pantalla actual (para evitar re-render indeseado)
   }
 
   clear() { this.root.innerHTML = ''; this.hudRefs = null; }
@@ -22,7 +23,7 @@ export class UI {
 
   // ---------- MENÚ PRINCIPAL ----------
   showMenu() {
-    this.clear();
+    this.clear(); this.current = 'menu';
     const a = this.ctl.getAuth();
     const header = el('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' } },
       el('div', { class: 'logo', html: 'GEOMETRY<br><span class="em">EMIR</span>' }),
@@ -49,7 +50,7 @@ export class UI {
 
   // ---------- SELECCIÓN DE NIVEL ----------
   showLevelSelect() {
-    this.clear();
+    this.clear(); this.current = 'levels';
     const cards = this.ctl.levels.map((lv) => {
       const d = DIFFICULTY[lv.difficulty];
       const score = this.ctl.scores.getLocalScore(lv.id);
@@ -79,7 +80,7 @@ export class UI {
 
   // ---------- HUD EN JUEGO ----------
   showHUD(level) {
-    this.clear();
+    this.clear(); this.current = 'hud';
     const fill = el('div', { class: 'progress-fill' });
     const pct = el('div', { class: 'progress-pct' }, '0%');
     const attempts = el('div', { class: 'attempts' }, 'Intento 1');
@@ -130,7 +131,7 @@ export class UI {
 
   // ---------- COMPLETADO ----------
   showComplete(result, level) {
-    this.clear();
+    this.clear(); this.current = 'complete';
     const totalCoins = level.objects.filter((o) => o.type === 'coin').length;
     const screen = el('div', { class: 'screen' },
       el('div', { class: 'panel' },
@@ -155,7 +156,7 @@ export class UI {
 
   // ---------- LEADERBOARD ----------
   async showLeaderboard(levelId) {
-    this.clear();
+    this.clear(); this.current = 'leaderboard';
     const level = this.ctl.levels.find((l) => l.id === levelId);
     const list = el('div', { class: 'lb-list' }, el('div', { class: 'hint' }, 'Cargando…'));
     const screen = el('div', { class: 'screen' },
@@ -182,7 +183,7 @@ export class UI {
   }
 
   showLeaderboardPicker() {
-    this.clear();
+    this.clear(); this.current = 'lbpicker';
     const cards = this.ctl.levels.map((lv) =>
       el('div', { class: 'level-card', onClick: () => this.showLeaderboard(lv.id) },
         el('h3', { style: { color: DIFFICULTY[lv.difficulty].color } }, lv.name),
@@ -197,7 +198,7 @@ export class UI {
 
   // ---------- AJUSTES ----------
   showSettings() {
-    this.clear();
+    this.clear(); this.current = 'settings';
     const a = this.ctl.getAuth();
     const music = el('input', { type: 'range', min: '0', max: '1', step: '0.05', value: this.ctl.audio.musicVol });
     const sfx = el('input', { type: 'range', min: '0', max: '1', step: '0.05', value: this.ctl.audio.sfxVol });
@@ -212,6 +213,7 @@ export class UI {
         el('h2', {}, 'Ajustes'),
         el('div', { class: 'setting-row' }, el('label', {}, 'Música'), music),
         el('div', { class: 'setting-row' }, el('label', {}, 'Efectos'), sfx),
+        el('div', { style: { marginTop: '6px' } }, el('button', { class: 'btn gold', onClick: () => this.ctl.fullscreen() }, '⛶ Pantalla completa')),
         el('div', { style: { marginTop: '10px' } }, authBtn),
         el('div', { class: 'hint', style: { marginTop: '18px' } }, 'Geometry-Emir · PWA instalable. Añádela a tu pantalla de inicio.'),
       ),

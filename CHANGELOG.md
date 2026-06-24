@@ -14,6 +14,21 @@ Formato: `MAJOR.MEDIO.MENOR`. Las fechas usan formato ISO (YYYY-MM-DD).
 
 ---
 
+## [1.2.0] — 2026-06-23
+
+### Añadido
+- **Música real (CC0):** 5 tracks electrónicos de OpenGameArt (dominio público) — uno por nivel + menú — servidos desde Firebase Hosting con caché offline (Workbox CacheFirst).
+- **Detección de beats en tiempo real** (AnalyserNode): el pulso visual se sincroniza con cualquier track por energía de graves. Sintetizador procedural conservado como *fallback* offline.
+- **Pantalla completa en móvil:** canvas dimensionado al `visualViewport` real, soporte de *safe-area* (notch), modo inmersivo (Fullscreen API + bloqueo a horizontal) al jugar, y botón manual en Ajustes.
+- Layout responsive para pantallas bajas (landscape de móvil) con *media query* compacto; pantallas con scroll.
+
+### Corregido
+- **Salto por toque/clic no funcionaba:** el HUD a pantalla completa interceptaba los punteros (regla CSS) → ahora `pointer-events: none`. Verificado con mouse y touch.
+- El cubo ahora salta también con el *flanco* de pulsación (tap rápido), no solo manteniendo pulsado.
+- Condición de carrera: un evento tardío de auth re-renderizaba el menú sobre otras pantallas → se rastrea la pantalla actual.
+
+---
+
 ## [1.1.0] — 2026-06-23
 
 ### Añadido — MVP jugable completo
@@ -53,6 +68,7 @@ Formato: `MAJOR.MEDIO.MENOR`. Las fechas usan formato ISO (YYYY-MM-DD).
 - Configuración de build con Vite + `vite-plugin-pwa`.
 - Configuración de Firebase (Hosting, Firestore rules/indexes, Storage rules).
 
-[Sin publicar]: https://github.com/jovalleyz/Geometry-Emir/compare/v1.1.0...HEAD
+[Sin publicar]: https://github.com/jovalleyz/Geometry-Emir/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/jovalleyz/Geometry-Emir/releases/tag/v1.2.0
 [1.1.0]: https://github.com/jovalleyz/Geometry-Emir/releases/tag/v1.1.0
 [1.0.0]: https://github.com/jovalleyz/Geometry-Emir/releases/tag/v1.0.0

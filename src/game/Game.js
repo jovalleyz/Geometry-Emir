@@ -33,12 +33,18 @@ export class Game {
 
     this.resize();
     window.addEventListener('resize', () => this.resize());
+    window.addEventListener('orientationchange', () => setTimeout(() => this.resize(), 120));
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', () => this.resize());
   }
 
   resize() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const W = this.canvas.clientWidth || window.innerWidth;
-    const H = this.canvas.clientHeight || window.innerHeight;
+    const vv = window.visualViewport;
+    const W = Math.round(vv?.width || window.innerWidth);
+    const H = Math.round(vv?.height || window.innerHeight);
+    // Forzar el tamaño CSS del canvas al viewport visible (full-screen real en móvil).
+    this.canvas.style.width = W + 'px';
+    this.canvas.style.height = H + 'px';
     this.canvas.width = Math.floor(W * dpr);
     this.canvas.height = Math.floor(H * dpr);
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -78,7 +84,7 @@ export class Game {
     this.state = 'playing';
     this.input.reset();
     if (!firstTime) this.cb.onAttempt?.(this.attempts);
-    audio.startMusic({ bpm: this.level.bpm || 140, scale: this.level.audio?.scale, root: this.level.audio?.root, seed: this.level.audio?.seed });
+    audio.startMusic({ bpm: this.level.bpm || 140, scale: this.level.audio?.scale, root: this.level.audio?.root, seed: this.level.audio?.seed, track: this.level.music });
     this.cb.onMode?.(this.player.mode);
   }
 
@@ -86,7 +92,7 @@ export class Game {
   retry() { this._lastCheckpoint = null; this._restart(false); }
   stop() { this.state = 'idle'; audio.stopMusic(); }
   pause() { if (this.state === 'playing') { this.state = 'paused'; audio.stopMusic(); } }
-  resume() { if (this.state === 'paused') { this.state = 'playing'; audio.startMusic({ bpm: this.level.bpm || 140, scale: this.level.audio?.scale, root: this.level.audio?.root, seed: this.level.audio?.seed }); } }
+  resume() { if (this.state === 'paused') { this.state = 'playing'; audio.startMusic({ bpm: this.level.bpm || 140, scale: this.level.audio?.scale, root: this.level.audio?.root, seed: this.level.audio?.seed, track: this.level.music }); } }
 
   update(dt) {
     if (this.state !== 'playing') return;
@@ -214,7 +220,7 @@ export class Game {
     this.cb.onAttempt?.(this.attempts);
     this.state = 'playing';
     this.input.reset();
-    audio.startMusic({ bpm: this.level.bpm || 140, scale: this.level.audio?.scale, root: this.level.audio?.root, seed: this.level.audio?.seed });
+    audio.startMusic({ bpm: this.level.bpm || 140, scale: this.level.audio?.scale, root: this.level.audio?.root, seed: this.level.audio?.seed, track: this.level.music });
   }
 
   _complete() {

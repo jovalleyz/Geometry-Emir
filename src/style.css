@@ -13,9 +13,15 @@
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--body); user-select: none; }
-#app { position: fixed; inset: 0; }
-#game-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+html, body {
+  width: 100%; height: 100vh; height: 100dvh;
+  overflow: hidden; overscroll-behavior: none; touch-action: none;
+  background: var(--bg); color: var(--text); font-family: var(--body); user-select: none;
+  position: fixed; inset: 0;
+}
+/* #app y canvas se dimensionan por JS al visualViewport (full-screen real en móvil) */
+#app { position: fixed; inset: 0; width: 100%; height: 100%; }
+#game-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; touch-action: none; }
 #ui-root { position: absolute; inset: 0; pointer-events: none; }
 #ui-root > * { pointer-events: auto; }
 
@@ -25,7 +31,8 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg);
   align-items: center; justify-content: center; gap: 22px;
   background: radial-gradient(circle at 50% 35%, rgba(0, 40, 60, 0.35), rgba(0, 8, 32, 0.92));
   backdrop-filter: blur(6px); animation: fadeIn 0.3s ease;
-  padding: 24px; text-align: center;
+  padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+  text-align: center; overflow-y: auto;
 }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
@@ -71,15 +78,19 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg);
 .coin-dot.on { background: var(--accent3); box-shadow: 0 0 8px var(--accent3); }
 
 /* ---------- HUD ---------- */
-.hud { position: absolute; inset: 0; pointer-events: none; }
-.hud .progress-wrap { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: min(70%, 600px); }
+/* El HUD cubre toda la pantalla pero NO debe capturar toques/clics:
+   el regla `#ui-root > *` los pondría en auto, así que lo forzamos a none
+   para que el toque llegue al canvas (saltar). El botón de pausa reactiva
+   sus propios eventos con `.pause-btn { pointer-events: auto }`. */
+.hud, #ui-root > .hud { position: absolute; inset: 0; pointer-events: none; }
+.hud .progress-wrap { position: absolute; top: calc(14px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); width: min(64%, 600px); }
 .hud .progress-bar { height: 14px; background: rgba(0, 8, 32, 0.7); border: 2px solid var(--accent1); border-radius: 8px; overflow: hidden; box-shadow: 0 0 10px rgba(0, 255, 204, 0.3); }
 .hud .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--accent1), var(--accent3)); transition: width 0.1s linear; }
 .hud .progress-pct { text-align: center; font-family: var(--display); font-size: 13px; margin-top: 6px; color: var(--accent1); text-shadow: 0 0 8px var(--accent1); }
-.hud .attempts { position: absolute; top: 14px; left: 16px; font-family: var(--mono); font-size: 14px; color: var(--text2); }
-.hud .coins-hud { position: absolute; top: 40px; left: 16px; }
-.hud .mode-tag { position: absolute; top: 14px; right: 60px; font-family: var(--mono); font-size: 13px; color: var(--accent2); text-transform: uppercase; }
-.pause-btn { position: absolute; top: 12px; right: 12px; width: 42px; height: 42px; border-radius: 10px; background: var(--ui-bg); border: 2px solid var(--accent1); color: var(--accent1); font-size: 18px; cursor: pointer; pointer-events: auto; box-shadow: 0 0 10px rgba(0, 255, 204, 0.3); }
+.hud .attempts { position: absolute; top: calc(14px + env(safe-area-inset-top)); left: calc(16px + env(safe-area-inset-left)); font-family: var(--mono); font-size: 14px; color: var(--text2); }
+.hud .coins-hud { position: absolute; top: calc(42px + env(safe-area-inset-top)); left: calc(16px + env(safe-area-inset-left)); }
+.hud .mode-tag { position: absolute; top: calc(14px + env(safe-area-inset-top)); right: calc(64px + env(safe-area-inset-right)); font-family: var(--mono); font-size: 13px; color: var(--accent2); text-transform: uppercase; }
+.pause-btn { position: absolute; top: calc(12px + env(safe-area-inset-top)); right: calc(12px + env(safe-area-inset-right)); width: 44px; height: 44px; border-radius: 10px; background: var(--ui-bg); border: 2px solid var(--accent1); color: var(--accent1); font-size: 18px; cursor: pointer; pointer-events: auto; box-shadow: 0 0 10px rgba(0, 255, 204, 0.3); }
 
 /* ---------- Panels ---------- */
 .panel { background: var(--ui-bg); border: 2px solid var(--accent1); border-radius: 18px; padding: 28px 32px; box-shadow: 0 0 30px rgba(0, 255, 204, 0.2); width: min(520px, 92vw); }
@@ -125,3 +136,20 @@ input[type=range] { flex: 1; accent-color: var(--accent1); height: 6px; }
 }
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-thumb { background: rgba(0, 255, 204, 0.3); border-radius: 4px; }
+
+/* ---------- Pantallas bajas (landscape de móvil) ---------- */
+@media (max-height: 500px) {
+  .screen { gap: 10px; justify-content: flex-start; }
+  .logo { font-size: clamp(16px, 5vw, 28px) !important; line-height: 1.3; }
+  .subtitle { font-size: 10px; }
+  .panel { padding: 16px 20px; }
+  .panel h2 { font-size: 16px; margin-bottom: 10px; }
+  .btn { padding: 9px 20px; font-size: 14px; min-width: 180px; }
+  .btn-row { gap: 8px; }
+  .stats-grid { gap: 8px; margin-bottom: 12px; }
+  .stat { padding: 8px; }
+  .stat .value { font-size: 16px; }
+  .levels-grid { max-height: none; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+  .level-card { padding: 12px; }
+  .hint { font-size: 11px; }
+}

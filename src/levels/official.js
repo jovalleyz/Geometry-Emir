@@ -23,6 +23,7 @@ function stereoRush() {
     id: 'stereo-rush', name: 'Stereo Rush', difficulty: 'easy', bpm: 140,
     audio: { scale: 'minor', root: 45, seed: 7 },
     colors: { bg: '#000820', ground: '#1A3A6B', accent1: '#00FFCC', accent2: '#FF00AA' },
+    music: '/audio/track-stereo.ogg',
     speed: 1, startMode: MODE.CUBE, length: 182, objects: b.build(),
   };
 }
@@ -48,6 +49,7 @@ function neonPulse() {
     id: 'neon-pulse', name: 'Neon Pulse', difficulty: 'normal', bpm: 160,
     audio: { scale: 'dorian', root: 43, seed: 21 },
     colors: { bg: '#0a0024', ground: '#3a1a6b', accent1: '#00FFCC', accent2: '#FF00AA' },
+    music: '/audio/track-neon.ogg',
     speed: 1, startMode: MODE.CUBE, length: 204, objects: b.build(),
   };
 }
@@ -76,6 +78,7 @@ function voltage() {
     id: 'voltage', name: 'Voltage', difficulty: 'hard', bpm: 175,
     audio: { scale: 'phrygian', root: 41, seed: 99 },
     colors: { bg: '#1a0014', ground: '#6b1a3a', accent1: '#FFD700', accent2: '#FF00AA' },
+    music: '/audio/track-voltage.ogg',
     speed: 1, startMode: MODE.CUBE, length: 222, objects: b.build(),
   };
 }
@@ -104,6 +107,7 @@ function gravityStorm() {
     id: 'gravity-storm', name: 'Gravity Storm', difficulty: 'harder', bpm: 185,
     audio: { scale: 'phrygian', root: 38, seed: 333 },
     colors: { bg: '#001a14', ground: '#1a6b4a', accent1: '#00FFCC', accent2: '#FFD700' },
+    music: '/audio/track-gravity.ogg',
     speed: 1, startMode: MODE.CUBE, length: 236, objects: b.build(),
   };
 }
