@@ -1,0 +1,233 @@
+// UI — gestiona todas las pantallas DOM sobre el canvas.
+import { el, formatPercent } from '../utils/helpers.js';
+import { DIFFICULTY } from '../utils/constants.js';
+
+export class UI {
+  constructor(root, ctl) {
+    this.root = root;
+    this.ctl = ctl;            // controlador inyectado desde main.js
+    this.hudRefs = null;
+  }
+
+  clear() { this.root.innerHTML = ''; this.hudRefs = null; }
+
+  _topBar() {
+    const a = this.ctl.getAuth();
+    const name = a.user ? (a.profile?.displayName || a.user.displayName || 'Invitado') : '—';
+    return el('div', { class: 'top-bar' },
+      el('span', { class: 'user-chip' }, a.user ? `👤 ${name}` : '👤 ...'),
+      el('button', { class: 'btn small secondary', onClick: () => this.showSettings() }, '⚙'),
+    );
+  }
+
+  // ---------- MENÚ PRINCIPAL ----------
+  showMenu() {
+    this.clear();
+    const a = this.ctl.getAuth();
+    const header = el('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' } },
+      el('div', { class: 'logo', html: 'GEOMETRY<br><span class="em">EMIR</span>' }),
+      el('div', { class: 'subtitle' }, 'Neon Rhythm Runner'),
+    );
+    const body = a.user
+      ? el('div', { style: { display: 'flex', flexDirection: 'column', gap: '14px', alignItems: 'center', marginTop: '18px' } },
+          el('button', { class: 'btn', onClick: () => this.showLevelSelect() }, '▶ Jugar'),
+          el('button', { class: 'btn secondary', onClick: () => this.showLeaderboardPicker() }, '🏆 Leaderboard'),
+          el('button', { class: 'btn gold', onClick: () => this.showSettings() }, '⚙ Ajustes'),
+          el('div', { class: 'hint', style: { marginTop: '8px' } }, 'Toca / Click / Espacio para saltar. Cruza los portales para cambiar de modo.'),
+        )
+      : el('div', { class: 'panel', style: { maxWidth: '380px', marginTop: '20px' } },
+          el('h2', {}, 'Bienvenido'),
+          el('p', { class: 'hint', style: { marginBottom: '18px' } }, 'Inicia sesión para guardar tu progreso y competir en el leaderboard global.'),
+          el('div', { class: 'btn-row', style: { flexDirection: 'column' } },
+            el('button', { class: 'btn', onClick: async () => { await this.ctl.signInGoogle().catch(() => this.toast('Error con Google')); this.showMenu(); } }, '🔓 Entrar con Google'),
+            el('button', { class: 'btn secondary', onClick: async () => { await this.ctl.signInGuest(); this.showMenu(); } }, '👻 Jugar como invitado'),
+          ),
+        );
+    const screen = el('div', { class: 'screen' }, header, body, this._topBar());
+    this.root.appendChild(screen);
+  }
+
+  // ---------- SELECCIÓN DE NIVEL ----------
+  showLevelSelect() {
+    this.clear();
+    const cards = this.ctl.levels.map((lv) => {
+      const d = DIFFICULTY[lv.difficulty];
+      const score = this.ctl.scores.getLocalScore(lv.id);
+      const totalCoins = lv.objects.filter((o) => o.type === 'coin').length;
+      const gotCoins = score?.coins?.length || 0;
+      const coinDots = el('div', { class: 'coins-row' },
+        ...Array.from({ length: totalCoins }, (_, i) => el('span', { class: `coin-dot ${i < gotCoins ? 'on' : ''}` })));
+      return el('div', { class: 'level-card', style: { borderColor: d.color, boxShadow: `0 0 12px ${d.color}55` }, onClick: () => this.ctl.startLevel(lv.id, { practice: false }) },
+        score?.completed ? el('div', { class: 'best' }, '✔') : el('div', { class: 'best' }, score ? formatPercent(score.bestPercent) : ''),
+        el('h3', { style: { color: d.color } }, lv.name),
+        el('span', { class: 'diff', style: { background: d.color + '22', color: d.color } }, `${d.label} · ${'★'.repeat(Math.min(5, d.stars))}`),
+        el('div', { class: 'meta' }, el('span', {}, `♪ ${lv.bpm} BPM`), el('span', {}, `◇ ${totalCoins} coins`)),
+        totalCoins ? coinDots : null,
+        el('div', { class: 'btn-row', style: { marginTop: '12px' } },
+          el('button', { class: 'btn small', onClick: (e) => { e.stopPropagation(); this.ctl.startLevel(lv.id, { practice: false }); } }, 'Jugar'),
+          el('button', { class: 'btn small secondary', onClick: (e) => { e.stopPropagation(); this.ctl.startLevel(lv.id, { practice: true }); } }, 'Práctica'),
+        ),
+      );
+    });
+    const screen = el('div', { class: 'screen' },
+      el('div', { class: 'back-link', onClick: () => this.showMenu() }, '← Menú'),
+      el('div', { class: 'logo', style: { fontSize: '26px' } }, 'Niveles'),
+      el('div', { class: 'levels-grid' }, ...cards),
+    );
+    this.root.appendChild(screen);
+  }
+
+  // ---------- HUD EN JUEGO ----------
+  showHUD(level) {
+    this.clear();
+    const fill = el('div', { class: 'progress-fill' });
+    const pct = el('div', { class: 'progress-pct' }, '0%');
+    const attempts = el('div', { class: 'attempts' }, 'Intento 1');
+    const modeTag = el('div', { class: 'mode-tag' }, 'CUBE');
+    const coins = el('div', { class: 'coins-hud' });
+    const hud = el('div', { class: 'hud' },
+      el('div', { class: 'progress-wrap' }, el('div', { class: 'progress-bar' }, fill), pct),
+      attempts, modeTag, coins,
+      el('button', { class: 'pause-btn', onClick: () => this.ctl.pause() }, '❚❚'),
+    );
+    this.root.appendChild(hud);
+    this.hudRefs = { fill, pct, attempts, modeTag, coins, level };
+    if (level.practice) attempts.textContent = 'Práctica';
+  }
+
+  updateProgress(p) { if (this.hudRefs) { this.hudRefs.fill.style.width = `${p}%`; this.hudRefs.pct.textContent = formatPercent(p); } }
+  setAttempts(n) { if (this.hudRefs && !this.hudRefs.level.practice) this.hudRefs.attempts.textContent = `Intento ${n}`; }
+  setMode(m) { if (this.hudRefs) this.hudRefs.modeTag.textContent = m.toUpperCase(); }
+  setCoins(collected, total) {
+    if (!this.hudRefs || !total) return;
+    this.hudRefs.coins.innerHTML = '';
+    for (let i = 0; i < total; i++) this.hudRefs.coins.appendChild(el('span', { class: `coin-dot ${i < collected ? 'on' : ''}` }));
+  }
+
+  // ---------- PAUSA ----------
+  showPause(stats) {
+    const overlay = el('div', { class: 'screen' },
+      el('div', { class: 'panel' },
+        el('h2', {}, 'Pausa'),
+        el('div', { class: 'stats-grid' },
+          stat('Progreso', formatPercent(stats.progress)),
+          stat('Mejor', formatPercent(stats.best)),
+          stat('Intentos', stats.attempts),
+          stat('Modo', stats.practice ? 'Práctica' : 'Normal'),
+        ),
+        el('div', { class: 'btn-row', style: { flexDirection: 'column' } },
+          el('button', { class: 'btn', onClick: () => { overlay.remove(); this.ctl.resume(); } }, '▶ Continuar'),
+          el('button', { class: 'btn secondary', onClick: () => { overlay.remove(); this.ctl.retry(); } }, '↻ Reiniciar'),
+          el('button', { class: 'btn gold', onClick: () => { overlay.remove(); this.ctl.togglePractice(); } }, stats.practice ? '🎮 Modo Normal' : '🎯 Modo Práctica'),
+          el('button', { class: 'btn secondary', onClick: () => { overlay.remove(); this.ctl.exitToMenu(); } }, '⏏ Salir al menú'),
+        ),
+      ),
+    );
+    this.root.appendChild(overlay);
+    this._pauseOverlay = overlay;
+  }
+  closePause() { this._pauseOverlay?.remove(); this._pauseOverlay = null; }
+
+  // ---------- COMPLETADO ----------
+  showComplete(result, level) {
+    this.clear();
+    const totalCoins = level.objects.filter((o) => o.type === 'coin').length;
+    const screen = el('div', { class: 'screen' },
+      el('div', { class: 'panel' },
+        el('h2', { class: 'win' }, '¡NIVEL COMPLETADO!'),
+        el('div', { class: 'logo', style: { fontSize: '20px', marginBottom: '14px' } }, level.name),
+        el('div', { class: 'stats-grid' },
+          stat('Progreso', '100%'),
+          stat('Intentos', result.attempts),
+          stat('Coins', `${result.coins.length}/${totalCoins}`),
+          stat('Dificultad', DIFFICULTY[level.difficulty].label),
+        ),
+        el('div', { class: 'btn-row' },
+          this.ctl.hasNext(level.id) ? el('button', { class: 'btn', onClick: () => this.ctl.nextLevel(level.id) }, '▶ Siguiente') : null,
+          el('button', { class: 'btn secondary', onClick: () => this.ctl.retry() }, '↻ Repetir'),
+          el('button', { class: 'btn gold', onClick: () => this.showLeaderboard(level.id) }, '🏆 Ranking'),
+          el('button', { class: 'btn secondary', onClick: () => this.showLevelSelect() }, '☰ Niveles'),
+        ),
+      ),
+    );
+    this.root.appendChild(screen);
+  }
+
+  // ---------- LEADERBOARD ----------
+  async showLeaderboard(levelId) {
+    this.clear();
+    const level = this.ctl.levels.find((l) => l.id === levelId);
+    const list = el('div', { class: 'lb-list' }, el('div', { class: 'hint' }, 'Cargando…'));
+    const screen = el('div', { class: 'screen' },
+      el('div', { class: 'back-link', onClick: () => this.showLevelSelect() }, '← Niveles'),
+      el('div', { class: 'panel' },
+        el('h2', {}, '🏆 Ranking'),
+        el('div', { class: 'logo', style: { fontSize: '18px', marginBottom: '14px' } }, level?.name || levelId),
+        list,
+        el('button', { class: 'btn secondary', onClick: () => this.showLevelSelect() }, 'Volver'),
+      ),
+    );
+    this.root.appendChild(screen);
+    const rows = await this.ctl.scores.getLeaderboard(levelId, 50);
+    const myUid = this.ctl.getAuth().user?.uid;
+    list.innerHTML = '';
+    if (!rows.length) { list.appendChild(el('div', { class: 'hint' }, 'Aún no hay registros. ¡Sé el primero!')); return; }
+    rows.forEach((r, i) => {
+      list.appendChild(el('div', { class: `lb-row ${r.userId === myUid ? 'me' : ''}` },
+        el('span', { class: 'rank' }, `#${i + 1}`),
+        el('span', { class: 'name' }, r.displayName || 'Player'),
+        el('span', { class: 'pct' }, `${r.completed ? '✔ ' : ''}${formatPercent(r.bestPercent)}`),
+      ));
+    });
+  }
+
+  showLeaderboardPicker() {
+    this.clear();
+    const cards = this.ctl.levels.map((lv) =>
+      el('div', { class: 'level-card', onClick: () => this.showLeaderboard(lv.id) },
+        el('h3', { style: { color: DIFFICULTY[lv.difficulty].color } }, lv.name),
+        el('div', { class: 'meta' }, el('span', {}, 'Ver ranking →')),
+      ));
+    this.root.appendChild(el('div', { class: 'screen' },
+      el('div', { class: 'back-link', onClick: () => this.showMenu() }, '← Menú'),
+      el('div', { class: 'logo', style: { fontSize: '24px' } }, '🏆 Leaderboards'),
+      el('div', { class: 'levels-grid' }, ...cards),
+    ));
+  }
+
+  // ---------- AJUSTES ----------
+  showSettings() {
+    this.clear();
+    const a = this.ctl.getAuth();
+    const music = el('input', { type: 'range', min: '0', max: '1', step: '0.05', value: this.ctl.audio.musicVol });
+    const sfx = el('input', { type: 'range', min: '0', max: '1', step: '0.05', value: this.ctl.audio.sfxVol });
+    music.addEventListener('input', () => this.ctl.audio.setMusicVol(parseFloat(music.value)));
+    sfx.addEventListener('input', () => this.ctl.audio.setSfxVol(parseFloat(sfx.value)));
+    const authBtn = a.user
+      ? el('button', { class: 'btn secondary', onClick: async () => { await this.ctl.signOut(); this.showSettings(); } }, `Cerrar sesión (${a.profile?.displayName || 'Invitado'})`)
+      : el('button', { class: 'btn', onClick: async () => { await this.ctl.signInGoogle().catch(() => this.toast('Error')); this.showSettings(); } }, 'Entrar con Google');
+    this.root.appendChild(el('div', { class: 'screen' },
+      el('div', { class: 'back-link', onClick: () => this.showMenu() }, '← Menú'),
+      el('div', { class: 'panel' },
+        el('h2', {}, 'Ajustes'),
+        el('div', { class: 'setting-row' }, el('label', {}, 'Música'), music),
+        el('div', { class: 'setting-row' }, el('label', {}, 'Efectos'), sfx),
+        el('div', { style: { marginTop: '10px' } }, authBtn),
+        el('div', { class: 'hint', style: { marginTop: '18px' } }, 'Geometry-Emir · PWA instalable. Añádela a tu pantalla de inicio.'),
+      ),
+    ));
+  }
+
+  // ---------- TOAST ----------
+  toast(msg, ms = 2200) {
+    let wrap = this.root.querySelector('.toast-wrap');
+    if (!wrap) { wrap = el('div', { class: 'toast-wrap' }); this.root.appendChild(wrap); }
+    const t = el('div', { class: 'toast' }, msg);
+    wrap.appendChild(t);
+    setTimeout(() => t.remove(), ms);
+  }
+}
+
+function stat(label, value) {
+  return el('div', { class: 'stat' }, el('div', { class: 'label' }, label), el('div', { class: 'value' }, String(value)));
+}
