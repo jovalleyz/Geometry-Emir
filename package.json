@@ -1,0 +1,23 @@
+{
+  "name": "geometry-emir",
+  "version": "1.0.0",
+  "description": "Geometry-Emir — rhythm-based auto-runner platformer (Geometry Dash spiritual clone) as an installable PWA with Firebase backend.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "vite build && firebase deploy --only hosting",
+    "deploy:all": "vite build && firebase deploy"
+  },
+  "keywords": ["game", "geometry-dash", "pwa", "canvas", "firebase", "rhythm", "platformer"],
+  "author": "Jonathan Vallez",
+  "license": "MIT",
+  "dependencies": {
+    "firebase": "^11.0.2"
+  },
+  "devDependencies": {
+    "vite": "^6.0.3",
+    "vite-plugin-pwa": "^0.21.1"
+  }
+}

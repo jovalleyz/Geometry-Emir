@@ -1,0 +1,26 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Avatares de usuario: lectura pública, escritura sólo del dueño (<2MB imágenes).
+    match /avatars/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null
+                   && request.auth.uid == userId
+                   && request.resource.size < 2 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
+    // Tracks musicales y assets de niveles: lectura pública, escritura autenticada (<10MB).
+    match /levels/{levelId}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null
+                   && request.resource.size < 10 * 1024 * 1024;
+    }
+
+    // Assets oficiales: sólo lectura.
+    match /official/{allPaths=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}
