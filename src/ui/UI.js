@@ -1,6 +1,7 @@
 // UI — gestiona todas las pantallas DOM sobre el canvas.
 import { el, formatPercent } from '../utils/helpers.js';
 import { DIFFICULTY } from '../utils/constants.js';
+import { drawAvatarPreview } from '../game/Avatars.js';
 
 export class UI {
   constructor(root, ctl) {
@@ -10,7 +11,7 @@ export class UI {
     this.current = null;       // pantalla actual (para evitar re-render indeseado)
   }
 
-  clear() { this.root.innerHTML = ''; this.hudRefs = null; }
+  clear() { if (this._avRaf) { cancelAnimationFrame(this._avRaf); this._avRaf = null; } this.root.innerHTML = ''; this.hudRefs = null; }
 
   _topBar() {
     const a = this.ctl.getAuth();
@@ -32,8 +33,9 @@ export class UI {
     const body = a.user
       ? el('div', { style: { display: 'flex', flexDirection: 'column', gap: '14px', alignItems: 'center', marginTop: '18px' } },
           el('button', { class: 'btn', onClick: () => this.showLevelSelect() }, '▶ Jugar'),
-          el('button', { class: 'btn secondary', onClick: () => this.showLeaderboardPicker() }, '🏆 Leaderboard'),
-          el('button', { class: 'btn gold', onClick: () => this.showSettings() }, '⚙ Ajustes'),
+          el('button', { class: 'btn secondary', onClick: () => this.showAvatars() }, '🎭 Avatars'),
+          el('button', { class: 'btn gold', onClick: () => this.showLeaderboardPicker() }, '🏆 Leaderboard'),
+          el('button', { class: 'btn secondary', onClick: () => this.showSettings() }, '⚙ Ajustes'),
           el('div', { class: 'hint', style: { marginTop: '8px' } }, 'Toca / Click / Espacio para saltar. Cruza los portales para cambiar de modo.'),
         )
       : el('div', { class: 'panel', style: { maxWidth: '380px', marginTop: '20px' } },
@@ -76,6 +78,38 @@ export class UI {
       el('div', { class: 'levels-grid' }, ...cards),
     );
     this.root.appendChild(screen);
+  }
+
+  // ---------- AVATARS ----------
+  showAvatars() {
+    this.clear(); this.current = 'avatars';
+    const selId = this.ctl.getAvatar().id;
+    const cards = this.ctl.avatars.map((av) => {
+      const canvas = el('canvas', { width: '120', height: '104', class: 'avatar-canvas' });
+      const card = el('div', { class: `level-card avatar-card ${av.id === selId ? 'selected' : ''}`, style: { textAlign: 'center', borderColor: av.c1 }, onClick: () => { this.ctl.setAvatar(av.id); this.showAvatars(); } },
+        canvas, el('h3', { style: { color: av.c1, fontSize: '16px', marginTop: '6px' } }, av.name),
+        av.id === selId ? el('div', { class: 'diff', style: { background: av.c1 + '22', color: av.c1 } }, '✔ Elegido') : null,
+      );
+      card._canvas = canvas; card._av = av;
+      return card;
+    });
+    this.root.appendChild(el('div', { class: 'screen' },
+      el('div', { class: 'back-link', onClick: () => this.showMenu() }, '← Menú'),
+      el('div', { class: 'logo', style: { fontSize: '24px' } }, 'Elige tu Avatar'),
+      el('div', { class: 'hint' }, 'Tienen gestos y reaccionan al saltar.'),
+      el('div', { class: 'levels-grid' }, ...cards),
+    ));
+    const draw = () => {
+      const t = performance.now() / 1000;
+      for (const c of cards) {
+        const ctx = c._canvas.getContext('2d');
+        ctx.clearRect(0, 0, 120, 104);
+        const excited = (t * 1.3 + (c._av.id.length)) % 2.6 < 0.5;
+        drawAvatarPreview(ctx, c._av, 60, 52, 62, { t, excited });
+      }
+      this._avRaf = requestAnimationFrame(draw);
+    };
+    draw();
   }
 
   // ---------- HUD EN JUEGO ----------

@@ -14,6 +14,19 @@ Formato: `MAJOR.MEDIO.MENOR`. Las fechas usan formato ISO (YYYY-MM-DD).
 
 ---
 
+## [1.3.0] — 2026-06-28
+
+### Añadido
+- **10 niveles oficiales** (antes 4): + City Lights, Stardust, Retrowave, Deep Cavern, Tidal y Final Rush [Demon]. Todos verificados 100% completables con bot multimodo (Playwright).
+- **Sistema de avatars** (10) seleccionables con **caras animadas y gestos** estilo Geometry Dash: Classic, Devil (cuernos+colmillos), Happy, Cool (gafas), Robot (antena), Ghost, Ninja (banda), Star (ojos estrella), Toxic, Aqua. Parpadeo, boca que se abre al saltar, ojos. Pantalla de selección con previews animados + persistencia.
+- **Fondos temáticos con parallax multicapa** que se desplazan según avanza el nivel: `city` (rascacielos + luna), `space` (planeta anillado + nebulosa), `synthwave` (sol retro + rejilla + montañas), `cave` (estalactitas + cristales), `ocean` (atardecer + mar). Cada nivel con su tema.
+- 5 tracks musicales CC0 adicionales (9 en total).
+
+### Cambiado
+- **Arquitectura de render desacoplada** (interfaz `renderer`): `Canvas2DRenderer` (motor activo, verificado) y `PixiRenderer` (WebGL/PixiJS v8, disponible vía flag `USE_WEBGL` para reactivar en dispositivos con GPU verificable).
+
+---
+
 ## [1.2.0] — 2026-06-23
 
 ### Añadido
@@ -59,16 +72,8 @@ Formato: `MAJOR.MEDIO.MENOR`. Las fechas usan formato ISO (YYYY-MM-DD).
 - Configuración de build con Vite + `vite-plugin-pwa`.
 - Configuración de Firebase (Hosting, Firestore rules/indexes, Storage rules).
 
-## [1.0.0] — 2026-06-23
-
-### Añadido
-- Inicialización del repositorio y estructura base del proyecto.
-- Esquema de versionado y `CHANGELOG.md`.
-- Memoria de proyecto (objetivo, stack, versionado).
-- Configuración de build con Vite + `vite-plugin-pwa`.
-- Configuración de Firebase (Hosting, Firestore rules/indexes, Storage rules).
-
-[Sin publicar]: https://github.com/jovalleyz/Geometry-Emir/compare/v1.2.0...HEAD
+[Sin publicar]: https://github.com/jovalleyz/Geometry-Emir/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/jovalleyz/Geometry-Emir/releases/tag/v1.3.0
 [1.2.0]: https://github.com/jovalleyz/Geometry-Emir/releases/tag/v1.2.0
 [1.1.0]: https://github.com/jovalleyz/Geometry-Emir/releases/tag/v1.1.0
 [1.0.0]: https://github.com/jovalleyz/Geometry-Emir/releases/tag/v1.0.0

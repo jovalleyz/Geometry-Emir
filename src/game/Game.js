@@ -2,20 +2,18 @@
 import { Player } from './Player.js';
 import { World } from './World.js';
 import { Particles } from './Particles.js';
-import { Background } from './Background.js';
-import { COLORS, MODE, OBJ, ROWS_VISIBLE, GROUND_ROWS } from '../utils/constants.js';
-import { clamp, aabb, hexToRgba } from '../utils/helpers.js';
+import { COLORS, MODE, ROWS_VISIBLE, GROUND_ROWS } from '../utils/constants.js';
+import { clamp, aabb } from '../utils/helpers.js';
 import { audio } from '../core/AudioManager.js';
 
 export class Game {
-  constructor(canvas, input, callbacks = {}) {
+  constructor(canvas, input, renderer, callbacks = {}) {
     this.canvas = canvas;
-    this.ctx = canvas.getContext('2d');
+    this.renderer = renderer;       // PixiRenderer (WebGL)
     this.input = input;
     this.cb = callbacks;            // { onProgress, onAttempt, onComplete, onCoin, onMode, onDeath }
     this.player = new Player();
     this.particles = new Particles();
-    this.bg = new Background();
 
     this.state = 'idle';            // idle | playing | respawning | complete
     this.cameraX = 0;
@@ -38,32 +36,28 @@ export class Game {
   }
 
   resize() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const vv = window.visualViewport;
     const W = Math.round(vv?.width || window.innerWidth);
     const H = Math.round(vv?.height || window.innerHeight);
-    // Forzar el tamaño CSS del canvas al viewport visible (full-screen real en móvil).
-    this.canvas.style.width = W + 'px';
-    this.canvas.style.height = H + 'px';
-    this.canvas.width = Math.floor(W * dpr);
-    this.canvas.height = Math.floor(H * dpr);
-    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.W = W; this.H = H;
     this.tile = H / ROWS_VISIBLE;
     this.groundY = H - GROUND_ROWS * this.tile; // y de pantalla para world y=0
+    this.renderer?.resize(W, H); // Pixi gestiona el tamaño del canvas (autoDensity)
   }
 
-  loadLevel(level, { practice = false, iconColor, iconColor2 } = {}) {
+  loadLevel(level, { practice = false, avatar } = {}) {
     this.level = level;
     this.world = new World(level);
     this.colors = { ...COLORS, bg: level.colors?.bg || COLORS.bg, ground: level.colors?.ground || COLORS.ground, accent1: level.colors?.accent1 || COLORS.accent1, accent2: level.colors?.accent2 || COLORS.accent2 };
-    this.iconColor = iconColor || COLORS.accent1;
-    this.iconColor2 = iconColor2 || COLORS.accent2;
+    this.avatar = avatar || this.avatar;
+    this.iconColor = this.avatar?.c1 || COLORS.accent1;
+    this.iconColor2 = this.avatar?.c2 || COLORS.accent2;
     this.practice = practice;
     this.attempts = 0;
     this.bestPercent = 0;
     this.coinsCollected = new Set();
     this._spawn = { x: 0, y: 0, mode: level.startMode || MODE.CUBE, gravDir: 1, speedMult: level.speed || 1 };
+    this.renderer?.loadLevel(this.world, this.colors, this.iconColor, this.iconColor2);
     this._restart(true);
   }
 
@@ -237,263 +231,8 @@ export class Game {
     });
   }
 
-  // ---------- RENDER ----------
-  render(alpha) {
-    const ctx = this.ctx, W = this.W, H = this.H;
-    if (!this.colors) { ctx.clearRect(0, 0, W, H); return; }
-    const pulse = clamp(1 - (performance.now() - audio.beatTime) / 180, 0, 1);
-
-    ctx.save();
-    if (this.shake > 0) {
-      const s = this.shake * 8;
-      ctx.translate((Math.random() - 0.5) * s, (Math.random() - 0.5) * s);
-    }
-
-    this.bg.render(ctx, W, H, this.cameraX, this.colors, pulse, performance.now() / 1000);
-
-    // Suelo siempre (también de fondo en el menú).
-    this._drawGround(ctx, pulse);
-
-    // Mundo (sólo con nivel cargado y en juego).
-    if (this.world && this.state !== 'idle') {
-      this._drawSolids(ctx);
-      this._drawSpikes(ctx);
-      this._drawPortals(ctx);
-      this._drawOrbsPads(ctx);
-      this._drawCoins(ctx);
-      this._drawParticles(ctx);
-      if (!this.player.dead) this._drawPlayer(ctx);
-    }
-
-    ctx.restore();
-
-    if (this.flash > 0) {
-      ctx.fillStyle = hexToRgba('#FFFFFF', this.flash * 0.5);
-      ctx.fillRect(0, 0, W, H);
-    }
-  }
-
-  // Coordenadas mundo -> pantalla.
-  sx(wx) { return (wx - this.cameraX) * this.tile; }
-  sy(wy) { return this.groundY - (wy - this.cameraY) * this.tile; }
-
-  _drawGround(ctx, pulse) {
-    const t = this.tile;
-    const gy = this.sy(0);
-    // Banda de suelo.
-    const grad = ctx.createLinearGradient(0, gy, 0, this.H);
-    grad.addColorStop(0, hexToRgba(this.colors.ground, 0.95));
-    grad.addColorStop(1, hexToRgba(this.colors.bg, 1));
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, gy, this.W, this.H - gy);
-    // Línea neón superior.
-    ctx.save();
-    ctx.shadowColor = this.colors.accent1;
-    ctx.shadowBlur = 16 + pulse * 12;
-    ctx.strokeStyle = this.colors.accent1;
-    ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(this.W, gy); ctx.stroke();
-    ctx.restore();
-    // Rejilla del suelo.
-    ctx.strokeStyle = hexToRgba(this.colors.accent1, 0.10);
-    ctx.lineWidth = 1;
-    const off = (this.cameraX * t) % t;
-    for (let x = -off; x < this.W; x += t) {
-      ctx.beginPath(); ctx.moveTo(x, gy); ctx.lineTo(x, this.H); ctx.stroke();
-    }
-  }
-
-  _glowRect(ctx, x, y, w, h, color, blur = 12, fillAlpha = 0.22) {
-    ctx.save();
-    ctx.shadowColor = color; ctx.shadowBlur = blur;
-    ctx.fillStyle = hexToRgba(color, fillAlpha);
-    ctx.fillRect(x, y, w, h);
-    ctx.shadowBlur = 0;
-    ctx.strokeStyle = color; ctx.lineWidth = 2;
-    ctx.strokeRect(x, y, w, h);
-    ctx.restore();
-  }
-
-  _drawSolids(ctx) {
-    const t = this.tile;
-    for (const b of this.world.solids) {
-      const x = this.sx(b.x), y = this.sy(b.y + b.h);
-      if (x + b.w * t < -50 || x > this.W + 50) continue;
-      this._glowRect(ctx, x, y, b.w * t, b.h * t, this.colors.ground === COLORS.ground ? '#2a5c9a' : this.colors.accent1, 10, 0.5);
-      // brillo superior
-      ctx.fillStyle = hexToRgba(this.colors.accent1, 0.25);
-      ctx.fillRect(x, y, b.w * t, 3);
-    }
-  }
-
-  _drawSpikes(ctx) {
-    const t = this.tile;
-    for (const sp of this.world.spikes) {
-      const x = this.sx(sp.x);
-      if (x + t < -50 || x > this.W + 50) continue;
-      const scale = sp.mini ? 0.55 : 1;
-      const w = t, baseY = this.sy(sp.y), topY = this.sy(sp.y + 1 * scale);
-      ctx.save();
-      ctx.shadowColor = this.colors.danger; ctx.shadowBlur = 12;
-      ctx.fillStyle = hexToRgba(this.colors.danger, 0.85);
-      ctx.beginPath();
-      if (sp.dir === 'down') {
-        const bY = this.sy(sp.y + 1), tY = this.sy(sp.y + 1 - scale);
-        ctx.moveTo(x + w * 0.1, bY); ctx.lineTo(x + w * 0.9, bY); ctx.lineTo(x + w * 0.5, tY);
-      } else {
-        ctx.moveTo(x + w * 0.1, baseY); ctx.lineTo(x + w * 0.9, baseY); ctx.lineTo(x + w * 0.5, topY);
-      }
-      ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = this.colors.danger; ctx.lineWidth = 2; ctx.stroke();
-      ctx.restore();
-    }
-  }
-
-  _drawPortals(ctx) {
-    const t = this.tile;
-    for (const portal of this.world.portals) {
-      const x = this.sx(portal.x), cy = this.sy(portal.y + 1.5);
-      if (x + t < -50 || x > this.W + 50) continue;
-      const col = portal.kind === 'gravity' ? this.colors.accent2 : portal.kind === 'speed' ? this.colors.accent3 : this.colors.accent1;
-      ctx.save();
-      ctx.shadowColor = col; ctx.shadowBlur = 18;
-      ctx.strokeStyle = col; ctx.lineWidth = 3;
-      ctx.globalAlpha = portal.triggered ? 0.3 : 1;
-      ctx.beginPath();
-      ctx.ellipse(x + t * 0.5, cy, t * 0.42, t * 1.6, 0, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.fillStyle = hexToRgba(col, 0.18); ctx.fill();
-      // etiqueta
-      ctx.shadowBlur = 0; ctx.fillStyle = col; ctx.font = `bold ${t * 0.5}px "Exo 2", sans-serif`;
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      const label = portal.kind === 'mode' ? ({ cube: '◼', ship: '▲', ball: '●', wave: '◆', ufo: '⬭' }[portal.value] || '?') : portal.kind === 'speed' ? `${portal.value}×` : '⇅';
-      ctx.fillText(label, x + t * 0.5, cy);
-      ctx.restore();
-    }
-  }
-
-  _drawOrbsPads(ctx) {
-    const t = this.tile;
-    for (const orb of this.world.orbs) {
-      const cx = this.sx(orb.x + 0.5), cy = this.sy(orb.y + 0.5);
-      if (cx < -50 || cx > this.W + 50) continue;
-      const col = this.colors.accent3;
-      ctx.save();
-      ctx.shadowColor = col; ctx.shadowBlur = 14;
-      ctx.globalAlpha = orb.used ? 0.3 : 1;
-      ctx.strokeStyle = col; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.arc(cx, cy, t * 0.32, 0, Math.PI * 2); ctx.stroke();
-      ctx.fillStyle = hexToRgba(col, 0.25); ctx.fill();
-      ctx.restore();
-    }
-    for (const pad of this.world.pads) {
-      const x = this.sx(pad.x + 0.1), y = this.sy(pad.y + 0.25);
-      this._glowRect(ctx, x, y, t * 0.8, t * 0.18, this.colors.accent1, 12, 0.5);
-    }
-  }
-
-  _drawCoins(ctx) {
-    const t = this.tile;
-    for (const c of this.world.coins) {
-      if (c.collected) continue;
-      const cx = this.sx(c.x + 0.5), cy = this.sy(c.y + 0.5);
-      if (cx < -50 || cx > this.W + 50) continue;
-      const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 200 + c.id);
-      ctx.save();
-      ctx.shadowColor = this.colors.accent3; ctx.shadowBlur = 12 + pulse * 8;
-      ctx.strokeStyle = this.colors.accent3; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.arc(cx, cy, t * 0.34, 0, Math.PI * 2); ctx.stroke();
-      ctx.fillStyle = hexToRgba(this.colors.accent3, 0.15 + pulse * 0.15); ctx.fill();
-      ctx.fillStyle = this.colors.accent3; ctx.font = `bold ${t * 0.4}px "Press Start 2P", monospace`;
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.shadowBlur = 0;
-      ctx.fillText('C', cx, cy + 1);
-      ctx.restore();
-    }
-  }
-
-  _drawParticles(ctx) {
-    const t = this.tile;
-    for (const p of this.particles.list) {
-      const x = this.sx(p.x), y = this.sy(p.y);
-      const a = clamp(p.life / p.maxLife, 0, 1);
-      ctx.fillStyle = hexToRgba(p.color, a);
-      const sz = p.size * t;
-      ctx.fillRect(x - sz / 2, y - sz / 2, sz, sz);
-    }
-  }
-
-  _drawPlayer(ctx) {
-    const p = this.player, t = this.tile, s = p.hitSize;
-    const cx = this.sx(p.x + s / 2), cy = this.sy(p.y + s / 2);
-    const size = s * t;
-
-    // Trail.
-    ctx.save();
-    for (let i = 0; i < p.trail.length; i++) {
-      const tp = p.trail[i];
-      const a = (i / p.trail.length) * 0.35;
-      ctx.fillStyle = hexToRgba(this.iconColor, a);
-      const tsz = size * (0.3 + 0.5 * i / p.trail.length);
-      ctx.fillRect(this.sx(tp.x) - tsz / 2, this.sy(tp.y) - tsz / 2, tsz, tsz);
-    }
-    ctx.restore();
-
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(p.rotation);
-    ctx.shadowColor = this.iconColor; ctx.shadowBlur = 16;
-
-    if (p.mode === MODE.CUBE || p.mode === MODE.UFO) {
-      this._iconCube(ctx, size);
-      if (p.mode === MODE.UFO) { // domo del ufo
-        ctx.fillStyle = hexToRgba(this.iconColor2, 0.6);
-        ctx.beginPath(); ctx.ellipse(0, -size * 0.1, size * 0.35, size * 0.22, 0, Math.PI, 0); ctx.fill();
-      }
-    } else if (p.mode === MODE.SHIP) {
-      this._iconShip(ctx, size);
-    } else if (p.mode === MODE.BALL) {
-      this._iconBall(ctx, size);
-    } else if (p.mode === MODE.WAVE) {
-      this._iconWave(ctx, size);
-    }
-    ctx.restore();
-  }
-
-  _iconCube(ctx, size) {
-    const h = size / 2;
-    ctx.fillStyle = this.iconColor;
-    ctx.fillRect(-h, -h, size, size);
-    ctx.fillStyle = hexToRgba(this.iconColor2, 0.9);
-    ctx.fillRect(-h * 0.45, -h * 0.45, size * 0.45, size * 0.45);
-    ctx.shadowBlur = 0;
-    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2;
-    ctx.strokeRect(-h, -h, size, size);
-  }
-  _iconShip(ctx, size) {
-    const h = size / 2;
-    ctx.fillStyle = this.iconColor;
-    ctx.beginPath();
-    ctx.moveTo(-h, h * 0.6); ctx.lineTo(h, 0); ctx.lineTo(-h, -h * 0.6); ctx.closePath();
-    ctx.fill();
-    ctx.shadowBlur = 0; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = hexToRgba(this.iconColor2, 0.9);
-    ctx.beginPath(); ctx.arc(0, 0, h * 0.3, 0, Math.PI * 2); ctx.fill();
-  }
-  _iconBall(ctx, size) {
-    const r = size / 2;
-    ctx.fillStyle = this.iconColor;
-    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
-    ctx.shadowBlur = 0; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = hexToRgba(this.iconColor2, 0.9);
-    ctx.fillRect(-r * 0.5, -r * 0.15, r, r * 0.3);
-  }
-  _iconWave(ctx, size) {
-    const h = size / 2;
-    ctx.fillStyle = this.iconColor;
-    ctx.beginPath();
-    ctx.moveTo(h, 0); ctx.lineTo(-h, h * 0.7); ctx.lineTo(-h * 0.4, 0); ctx.lineTo(-h, -h * 0.7); ctx.closePath();
-    ctx.fill();
-    ctx.shadowBlur = 0; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+  // ---------- RENDER (WebGL vía PixiRenderer) ----------
+  render() {
+    this.renderer?.render(this);
   }
 }

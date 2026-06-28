@@ -77,6 +77,12 @@ html, body {
 .coin-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--accent3); margin-right: 5px; }
 .coin-dot.on { background: var(--accent3); box-shadow: 0 0 8px var(--accent3); }
 
+/* ---------- Avatars ---------- */
+.avatar-card { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; height: auto; overflow: visible; padding: 14px 12px 16px; gap: 4px; }
+.avatar-canvas { width: 120px; height: 104px; display: block; margin: 0 auto; flex: 0 0 auto; }
+.avatar-card h3 { margin: 2px 0 0; }
+.avatar-card.selected { box-shadow: 0 0 22px var(--accent3) !important; border-color: var(--accent3) !important; }
+
 /* ---------- HUD ---------- */
 /* El HUD cubre toda la pantalla pero NO debe capturar toques/clics:
    el regla `#ui-root > *` los pondría en auto, así que lo forzamos a none

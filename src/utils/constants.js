@@ -65,4 +65,5 @@ export const STORAGE_KEYS = {
   progress: 'geoemir_progress_v1',
   settings: 'geoemir_settings_v1',
   guestId: 'geoemir_guest_v1',
+  avatar: 'geoemir_avatar_v1',
 };

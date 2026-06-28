@@ -4,10 +4,13 @@ import { GameLoop } from './core/GameLoop.js';
 import { InputManager } from './core/InputManager.js';
 import { audio } from './core/AudioManager.js';
 import { Game } from './game/Game.js';
+import { PixiRenderer } from './game/PixiRenderer.js';
+import { Canvas2DRenderer } from './game/Canvas2DRenderer.js';
 import { UI } from './ui/UI.js';
 import { LEVELS, LEVELS_BY_ID } from './levels/official.js';
 import { onAuth, authState, signInWithGoogle, signInGuest, signOut, updateProfileStats } from './firebase/auth.js';
 import { submitScore, getLocalScore, getLeaderboard } from './firebase/scores.js';
+import { AVATARS, getSelectedAvatar, setSelectedAvatar } from './game/Avatars.js';
 
 const canvas = document.getElementById('game-canvas');
 const uiRoot = document.getElementById('ui-root');
@@ -18,8 +21,37 @@ let practice = false;
 
 function totalCoins(level) { return level ? level.objects.filter((o) => o.type === 'coin').length : 0; }
 
+// --- Motor de render ---
+// Canvas2D es el motor activo y verificado. PixiJS/WebGL queda disponible para
+// reactivar (USE_WEBGL = true) cuando se pueda verificar en un dispositivo con GPU.
+const USE_WEBGL = false;
+async function createRenderer(canvas) {
+  if (USE_WEBGL) {
+    try {
+      const probe = new PixiRenderer();
+      const tmp = document.createElement('canvas');
+      const ok = await Promise.race([
+        probe.init(tmp).then(() => true).catch(() => false),
+        new Promise((r) => setTimeout(() => r(false), 3000)),
+      ]);
+      if (ok) {
+        try { probe.app?.destroy(true); } catch { /* noop */ }
+        const r = new PixiRenderer();
+        await r.init(canvas);
+        console.info('[GE] Render: WebGL (PixiJS v8)');
+        return r;
+      }
+    } catch { /* cae a Canvas 2D */ }
+  }
+  const r = new Canvas2DRenderer();
+  r.init(canvas);
+  console.info('[GE] Render: Canvas 2D');
+  return r;
+}
+const renderer = await createRenderer(canvas);
+
 // --- Juego con callbacks hacia la UI ---
-const game = new Game(canvas, input, {
+const game = new Game(canvas, input, renderer, {
   onProgress: (p) => ui.updateProgress(p),
   onAttempt: (n) => { ui.setAttempts(n); ui.setCoins(0, totalCoins(currentLevel)); },
   onMode: (m) => ui.setMode(m),
@@ -37,6 +69,9 @@ const ctl = {
   signInGuest,
   signOut,
   scores: { getLocalScore, getLeaderboard },
+  avatars: AVATARS,
+  getAvatar: getSelectedAvatar,
+  setAvatar: (id) => { setSelectedAvatar(id); game.avatar = getSelectedAvatar(); },
   hasNext: (id) => LEVELS.findIndex((l) => l.id === id) < LEVELS.length - 1,
 
   startLevel(id, opts = {}) {
@@ -44,7 +79,7 @@ const ctl = {
     practice = !!opts.practice;
     audio.resume();
     goImmersive(); // pantalla completa + landscape en móvil
-    game.loadLevel(currentLevel, { practice, iconColor: '#00FFCC', iconColor2: '#FF00AA' });
+    game.loadLevel(currentLevel, { practice, avatar: getSelectedAvatar() });
     ui.showHUD({ ...currentLevel, practice });
     ui.setCoins(0, totalCoins(currentLevel));
     ui.setMode(game.player.mode);
@@ -64,6 +99,7 @@ const ctl = {
 };
 
 const ui = new UI(uiRoot, ctl);
+game.avatar = getSelectedAvatar();
 
 // Modo inmersivo: pantalla completa + bloqueo a horizontal (best-effort).
 function isTouch() { return window.matchMedia('(pointer: coarse)').matches; }
