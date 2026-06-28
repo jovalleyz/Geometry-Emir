@@ -1,5 +1,6 @@
 // main.js — punto de entrada: cablea motor, juego, UI y Firebase.
 import './style.css';
+import { registerSW } from 'virtual:pwa-register';
 import { GameLoop } from './core/GameLoop.js';
 import { InputManager } from './core/InputManager.js';
 import { audio } from './core/AudioManager.js';
@@ -119,6 +120,26 @@ input.onPause = () => {
   else if (game.state === 'paused') ctl.resume();
 };
 
+// Salir del juego (best-effort: cierra la PWA instalada o vuelve al menú).
+ctl.exitApp = () => {
+  game.stop(); audio.stopMusic(); audio.suspend();
+  if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+  ui.showMenu();
+  try { window.close(); } catch { /* no permitido */ }
+  setTimeout(() => { if (!document.hidden) ui.toast('Puedes cerrar la app para salir'); }, 400);
+};
+
+// No seguir corriendo en segundo plano: pausa el juego y suspende el audio.
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    if (game.state === 'playing') ctl.pause();
+    audio.suspend();
+  } else if (game.state !== 'paused') {
+    audio.resume();
+  }
+});
+window.addEventListener('pagehide', () => { game.stop?.(); audio.stopMusic(); audio.suspend(); });
+
 async function handleComplete(result) {
   ui.showComplete(result, currentLevel);
   if (result.coins.length) ui.toast(`◇ ${result.coins.length} coin(s) secreta(s)`);
@@ -156,3 +177,12 @@ onAuth(() => {
 });
 // Fallback por si auth tarda.
 setTimeout(() => { if (!booted) { booted = true; ui.showMenu(); } }, 1500);
+
+// --- Actualización de la PWA: aplica nuevas mejoras al abrir (autoUpdate) ---
+const updateSW = registerSW({
+  immediate: true,
+  onNeedRefresh() { updateSW(true); },          // aplica y recarga al detectar versión nueva
+  onRegisteredSW(swUrl, r) {
+    if (r) setInterval(() => r.update().catch(() => {}), 30 * 60 * 1000); // re-chequea cada 30 min
+  },
+});

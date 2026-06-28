@@ -65,6 +65,11 @@ export class AudioManager {
     if (this.ctx.state === 'suspended') this.ctx.resume();
   }
 
+  // Suspende el contexto (al pasar a segundo plano) para no consumir en background.
+  suspend() {
+    try { if (this.ctx && this.ctx.state === 'running') this.ctx.suspend(); } catch { /* noop */ }
+  }
+
   setMusicVol(v) { this.musicVol = v; if (this.musicGain) this.musicGain.gain.value = v; this._persist(); }
   setSfxVol(v) { this.sfxVol = v; if (this.sfxGain) this.sfxGain.gain.value = v; this._persist(); }
   _persist() {

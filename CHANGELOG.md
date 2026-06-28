@@ -14,6 +14,17 @@ Formato: `MAJOR.MEDIO.MENOR`. Las fechas usan formato ISO (YYYY-MM-DD).
 
 ---
 
+## [1.4.0] — 2026-06-28
+
+### Añadido
+- **Botón "Salir del juego"** (menú y pausa): detiene el juego, suspende el audio, sale de pantalla completa e intenta cerrar la PWA (best-effort).
+- **Auto-actualización de la PWA:** registro manual con `autoUpdate` + `skipWaiting`/`clientsClaim` y re-chequeo cada 30 min, para que un usuario con la app instalada reciba las mejoras al abrir.
+
+### Corregido
+- **No seguir corriendo en segundo plano:** al minimizar/cambiar de app se pausa el juego y se **suspende el AudioContext** (visibilitychange/pagehide). Verificado: estado `paused` + audio `suspended`.
+
+---
+
 ## [1.3.2] — 2026-06-28
 
 ### Cambiado
@@ -87,7 +98,8 @@ Formato: `MAJOR.MEDIO.MENOR`. Las fechas usan formato ISO (YYYY-MM-DD).
 - Configuración de build con Vite + `vite-plugin-pwa`.
 - Configuración de Firebase (Hosting, Firestore rules/indexes, Storage rules).
 
-[Sin publicar]: https://github.com/jovalleyz/Geometry-Emir/compare/v1.3.2...HEAD
+[Sin publicar]: https://github.com/jovalleyz/Geometry-Emir/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/jovalleyz/Geometry-Emir/releases/tag/v1.4.0
 [1.3.2]: https://github.com/jovalleyz/Geometry-Emir/releases/tag/v1.3.2
 [1.3.1]: https://github.com/jovalleyz/Geometry-Emir/releases/tag/v1.3.1
 [1.3.0]: https://github.com/jovalleyz/Geometry-Emir/releases/tag/v1.3.0

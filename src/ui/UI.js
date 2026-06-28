@@ -40,6 +40,7 @@ export class UI {
           el('button', { class: 'btn secondary', onClick: () => this.showAvatars() }, '🎭 Avatars'),
           el('button', { class: 'btn gold', onClick: () => this.showLeaderboardPicker() }, '🏆 Leaderboard'),
           el('button', { class: 'btn secondary', onClick: () => this.showSettings() }, '⚙ Ajustes'),
+          el('button', { class: 'btn small secondary', style: { marginTop: '4px', opacity: '0.8' }, onClick: () => this.ctl.exitApp() }, '⏏ Salir del juego'),
           el('div', { class: 'hint', style: { marginTop: '8px' } }, 'Toca / Click / Espacio para saltar. Cruza los portales para cambiar de modo.'),
         )
       : el('div', { class: 'panel', style: { maxWidth: '380px', marginTop: '20px' } },
@@ -158,7 +159,8 @@ export class UI {
           el('button', { class: 'btn', onClick: () => { overlay.remove(); this.ctl.resume(); } }, '▶ Continuar'),
           el('button', { class: 'btn secondary', onClick: () => { overlay.remove(); this.ctl.retry(); } }, '↻ Reiniciar'),
           el('button', { class: 'btn gold', onClick: () => { overlay.remove(); this.ctl.togglePractice(); } }, stats.practice ? '🎮 Modo Normal' : '🎯 Modo Práctica'),
-          el('button', { class: 'btn secondary', onClick: () => { overlay.remove(); this.ctl.exitToMenu(); } }, '⏏ Salir al menú'),
+          el('button', { class: 'btn secondary', onClick: () => { overlay.remove(); this.ctl.exitToMenu(); } }, '☰ Salir al menú'),
+          el('button', { class: 'btn small secondary', style: { opacity: '0.8' }, onClick: () => { overlay.remove(); this.ctl.exitApp(); } }, '⏏ Salir del juego'),
         ),
       ),
     );
