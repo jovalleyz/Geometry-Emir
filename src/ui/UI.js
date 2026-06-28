@@ -245,10 +245,21 @@ export class UI {
     const authBtn = a.user
       ? el('button', { class: 'btn secondary', onClick: async () => { await this.ctl.signOut(); this.showSettings(); } }, `Cerrar sesión (${a.profile?.displayName || 'Invitado'})`)
       : el('button', { class: 'btn', onClick: async () => { await this.ctl.signInGoogle().catch(() => this.toast('Error')); this.showSettings(); } }, 'Entrar con Google');
+    // Perfil: avatar (clic -> cambiar).
+    const av = this.ctl.getAvatar();
+    const avCanvas = el('canvas', { width: '76', height: '76', class: 'settings-avatar' });
+    const profileRow = el('div', { class: 'profile-row', title: 'Cambiar avatar', onClick: () => this.showAvatars() },
+      avCanvas,
+      el('div', { class: 'profile-info' },
+        el('div', { class: 'profile-name' }, a.profile?.displayName || (a.user ? 'Invitado' : '—')),
+        el('div', { class: 'profile-sub' }, `Avatar: ${av.name}  ·  cambiar ▸`),
+      ),
+    );
     this.root.appendChild(el('div', { class: 'screen' },
       el('div', { class: 'back-link', onClick: () => this.showMenu() }, '← Menú'),
       el('div', { class: 'panel' },
         el('h2', {}, 'Ajustes'),
+        profileRow,
         el('div', { class: 'setting-row' }, el('label', {}, 'Música'), music),
         el('div', { class: 'setting-row' }, el('label', {}, 'Efectos'), sfx),
         el('div', { style: { marginTop: '6px' } }, el('button', { class: 'btn gold', onClick: () => this.ctl.fullscreen() }, '⛶ Pantalla completa')),
@@ -256,6 +267,14 @@ export class UI {
         el('div', { class: 'hint', style: { marginTop: '18px' } }, 'Geometry-Emir · PWA instalable. Añádela a tu pantalla de inicio.'),
       ),
     ));
+    const actx = avCanvas.getContext('2d');
+    const draw = () => {
+      const t = performance.now() / 1000;
+      actx.clearRect(0, 0, 76, 76);
+      drawAvatarPreview(actx, av, 38, 40, 56, { t, excited: (t * 1.3) % 2.6 < 0.5 });
+      this._avRaf = requestAnimationFrame(draw);
+    };
+    draw();
   }
 
   // ---------- TOAST ----------

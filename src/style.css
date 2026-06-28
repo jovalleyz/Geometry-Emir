@@ -116,6 +116,14 @@ html, body {
 .lb-row .pct { color: var(--accent1); font-weight: 700; }
 .lb-row.me { border: 1px solid var(--accent1); box-shadow: 0 0 10px rgba(0, 255, 204, 0.3); }
 
+/* ---------- Perfil en Ajustes ---------- */
+.profile-row { display: flex; align-items: center; gap: 14px; padding: 12px; margin-bottom: 18px; border-radius: 12px; background: rgba(0, 20, 40, 0.5); border: 1px solid rgba(0, 255, 204, 0.25); cursor: pointer; transition: all 0.15s ease; }
+.profile-row:hover { border-color: var(--accent1); box-shadow: 0 0 14px rgba(0, 255, 204, 0.3); }
+.settings-avatar { width: 76px; height: 76px; flex: 0 0 auto; filter: drop-shadow(0 0 6px rgba(0, 255, 204, 0.4)); }
+.profile-info { text-align: left; }
+.profile-name { font-weight: 800; font-size: 18px; color: var(--text); }
+.profile-sub { font-family: var(--mono); font-size: 13px; color: var(--accent1); margin-top: 4px; }
+
 /* ---------- Settings sliders ---------- */
 .setting-row { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
 .setting-row label { width: 90px; text-align: left; color: var(--text2); font-size: 14px; }
