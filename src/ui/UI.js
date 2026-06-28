@@ -16,7 +16,11 @@ export class UI {
   _topBar() {
     const a = this.ctl.getAuth();
     const name = a.user ? (a.profile?.displayName || a.user.displayName || 'Invitado') : '—';
+    const av = this.ctl.getAvatar();
+    const avCanvas = el('canvas', { width: '44', height: '44', class: 'topbar-avatar', title: `Avatar: ${av.name}`, onClick: () => this.showAvatars() });
+    drawAvatarPreview(avCanvas.getContext('2d'), av, 22, 23, 32, { t: performance.now() / 1000 });
     return el('div', { class: 'top-bar' },
+      avCanvas,
       el('span', { class: 'user-chip' }, a.user ? `👤 ${name}` : '👤 ...'),
       el('button', { class: 'btn small secondary', onClick: () => this.showSettings() }, '⚙'),
     );
@@ -86,7 +90,7 @@ export class UI {
     const selId = this.ctl.getAvatar().id;
     const cards = this.ctl.avatars.map((av) => {
       const canvas = el('canvas', { width: '120', height: '104', class: 'avatar-canvas' });
-      const card = el('div', { class: `level-card avatar-card ${av.id === selId ? 'selected' : ''}`, style: { textAlign: 'center', borderColor: av.c1 }, onClick: () => { this.ctl.setAvatar(av.id); this.showAvatars(); } },
+      const card = el('div', { class: `level-card avatar-card ${av.id === selId ? 'selected' : ''}`, style: { textAlign: 'center', borderColor: av.c1 }, onClick: () => { this.ctl.setAvatar(av.id); this.showMenu(); this.toast(`Avatar: ${av.name} ✔`); } },
         canvas, el('h3', { style: { color: av.c1, fontSize: '16px', marginTop: '6px' } }, av.name),
         av.id === selId ? el('div', { class: 'diff', style: { background: av.c1 + '22', color: av.c1 } }, '✔ Elegido') : null,
       );

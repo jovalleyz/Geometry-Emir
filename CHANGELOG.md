@@ -14,6 +14,14 @@ Formato: `MAJOR.MEDIO.MENOR`. Las fechas usan formato ISO (YYYY-MM-DD).
 
 ---
 
+## [1.3.1] — 2026-06-28
+
+### Cambiado
+- Al seleccionar un avatar ahora vuelve al menú con el avatar aplicado (+ aviso).
+- El avatar elegido se muestra en la esquina superior derecha (junto al usuario); al tocarlo abre la selección.
+
+---
+
 ## [1.3.0] — 2026-06-28
 
 ### Añadido
@@ -72,7 +80,8 @@ Formato: `MAJOR.MEDIO.MENOR`. Las fechas usan formato ISO (YYYY-MM-DD).
 - Configuración de build con Vite + `vite-plugin-pwa`.
 - Configuración de Firebase (Hosting, Firestore rules/indexes, Storage rules).
 
-[Sin publicar]: https://github.com/jovalleyz/Geometry-Emir/compare/v1.3.0...HEAD
+[Sin publicar]: https://github.com/jovalleyz/Geometry-Emir/compare/v1.3.1...HEAD
+[1.3.1]: https://github.com/jovalleyz/Geometry-Emir/releases/tag/v1.3.1
 [1.3.0]: https://github.com/jovalleyz/Geometry-Emir/releases/tag/v1.3.0
 [1.2.0]: https://github.com/jovalleyz/Geometry-Emir/releases/tag/v1.2.0
 [1.1.0]: https://github.com/jovalleyz/Geometry-Emir/releases/tag/v1.1.0
