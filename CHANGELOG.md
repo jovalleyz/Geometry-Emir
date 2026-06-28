@@ -14,6 +14,19 @@ Formato: `MAJOR.MEDIO.MENOR`. Las fechas usan formato ISO (YYYY-MM-DD).
 
 ---
 
+## [1.5.0] — 2026-06-28
+
+### Añadido
+- **Gemas coleccionables (◆)** repartidas por todos los niveles: dan puntos al recogerlas. Contador de puntos en vivo en el HUD.
+- **Sistema de puntuación:** puntos por gemas, monedas secretas y bonus de compleción por dificultad. Se acumulan en el total del jugador (local + Firestore `stats.points`), sólo la mejora por nivel (anti-farmeo).
+- **Ranking global de jugadores** por puntos, con **rangos** (Novato→Leyenda según puntos). Botón "🏅 Ranking" en el menú; resalta tu posición.
+- Pantalla de victoria muestra puntos y gemas obtenidas.
+
+### Corregido
+- **Parpadeo de fondos:** la altura de edificios/picos/montañas y las ventanas se calculaban con la `x` de pantalla (cambiaba cada frame) → ahora usan un índice estable por elemento ligado al mundo.
+
+---
+
 ## [1.4.0] — 2026-06-28
 
 ### Añadido
@@ -98,7 +111,8 @@ Formato: `MAJOR.MEDIO.MENOR`. Las fechas usan formato ISO (YYYY-MM-DD).
 - Configuración de build con Vite + `vite-plugin-pwa`.
 - Configuración de Firebase (Hosting, Firestore rules/indexes, Storage rules).
 
-[Sin publicar]: https://github.com/jovalleyz/Geometry-Emir/compare/v1.4.0...HEAD
+[Sin publicar]: https://github.com/jovalleyz/Geometry-Emir/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/jovalleyz/Geometry-Emir/releases/tag/v1.5.0
 [1.4.0]: https://github.com/jovalleyz/Geometry-Emir/releases/tag/v1.4.0
 [1.3.2]: https://github.com/jovalleyz/Geometry-Emir/releases/tag/v1.3.2
 [1.3.1]: https://github.com/jovalleyz/Geometry-Emir/releases/tag/v1.3.1

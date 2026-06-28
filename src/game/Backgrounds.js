@@ -24,10 +24,15 @@ function drawStars(ctx, env, count = 60, color = '#FFFFFF', speed = 6) {
 }
 
 // Repite un patrón horizontal con desplazamiento parallax.
+// Pasa un índice ESTABLE por elemento (ligado a la posición de mundo, no a la x
+// de pantalla) para que altura/ventanas no cambien cada frame (evita parpadeo).
 function tiled(ctx, env, layerSpeed, spacing, drawOne) {
   const { W, cameraX } = env;
-  const off = ((cameraX * layerSpeed) % spacing + spacing) % spacing;
-  for (let x = -off - spacing; x < W + spacing; x += spacing) drawOne(x);
+  const scroll = cameraX * layerSpeed;
+  const off = ((scroll % spacing) + spacing) % spacing;
+  const baseIndex = Math.floor(scroll / spacing);
+  let n = 0;
+  for (let x = -off - spacing; x < W + spacing; x += spacing, n++) drawOne(x, baseIndex + n);
 }
 
 // ---------------- TEMAS ----------------
@@ -47,15 +52,18 @@ function city(ctx, env) {
   drawStars(ctx, env, 40, '#ffffff', 3);
   // Capa lejana de edificios.
   const baseY = H * 0.72;
-  const farBuild = (x, w, h, col, lit) => {
+  const farBuild = (x, w, h, col, lit, idx) => {
     ctx.fillStyle = col; ctx.fillRect(x, baseY - h, w, h);
-    // ventanas
+    // ventanas (patrón estable por columna/fila/idx -> no parpadea)
     ctx.fillStyle = hexToRgba(colors.accent1, lit);
-    for (let wy = baseY - h + 8; wy < baseY - 6; wy += 14)
-      for (let wx = x + 5; wx < x + w - 5; wx += 12) if ((wx + wy) % 3 === 0) ctx.fillRect(wx, wy, 5, 7);
+    let row = 0;
+    for (let wy = baseY - h + 8; wy < baseY - 6; wy += 14, row++) {
+      let col2 = 0;
+      for (let wx = x + 5; wx < x + w - 5; wx += 12, col2++) if ((col2 + row + idx) % 3 === 0) ctx.fillRect(wx, wy, 5, 7);
+    }
   };
-  tiled(ctx, env, 12, 130, (x) => farBuild(x, 90, 90 + ((x | 0) % 5) * 18, '#1a0f3a', 0.25));
-  tiled(ctx, env, 26, 100, (x) => farBuild(x, 70, 130 + ((x | 0) % 4) * 26, '#150a30', 0.4 + pulse * 0.3));
+  tiled(ctx, env, 12, 130, (x, idx) => farBuild(x, 90, 90 + ((idx % 5) + 5) % 5 * 18, '#1a0f3a', 0.25, idx));
+  tiled(ctx, env, 26, 100, (x, idx) => farBuild(x, 70, 130 + ((idx % 4) + 4) % 4 * 26, '#150a30', 0.4 + pulse * 0.3, idx));
   // Niebla inferior.
   const fog = ctx.createLinearGradient(0, baseY - 40, 0, baseY + 30);
   fog.addColorStop(0, 'rgba(0,0,0,0)'); fog.addColorStop(1, hexToRgba(colors.accent2, 0.25));
@@ -109,9 +117,11 @@ function synthwave(ctx, env) {
   // Montañas.
   const baseY = H * 0.66;
   ctx.fillStyle = hexToRgba(colors.accent2, 0.4);
-  ctx.beginPath(); ctx.moveTo(0, baseY);
-  const off = (cameraX * 14) % 160;
-  for (let x = -off, i = 0; x < W + 160; x += 160, i++) { ctx.lineTo(x, baseY - (40 + (i % 3) * 30)); ctx.lineTo(x + 80, baseY); }
+  const mScroll = cameraX * 14;
+  const mOff = ((mScroll % 160) + 160) % 160;
+  const mBase = Math.floor(mScroll / 160);
+  ctx.beginPath(); ctx.moveTo(-mOff - 160, baseY);
+  for (let x = -mOff - 160, i = 0; x < W + 160; x += 160, i++) { const hh = 40 + (((mBase + i) % 3) + 3) % 3 * 30; ctx.lineTo(x, baseY - hh); ctx.lineTo(x + 80, baseY); }
   ctx.lineTo(W, baseY); ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath(); ctx.fill();
   // Rejilla en perspectiva.
   ctx.strokeStyle = hexToRgba(colors.accent1, 0.25 + pulse * 0.15); ctx.lineWidth = 1.5;
@@ -128,11 +138,11 @@ function cave(ctx, env) {
   drawStars(ctx, env, 25, colors.accent1, 4);
   // Estalactitas (techo) y estalagmitas (suelo) en capas.
   const spike = (x, w, h, yTop, col) => { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(x, yTop); ctx.lineTo(x + w, yTop); ctx.lineTo(x + w / 2, yTop + h); ctx.closePath(); ctx.fill(); };
-  tiled(ctx, env, 10, 90, (x) => spike(x, 70, 80 + ((x | 0) % 5) * 20, 0, hexToRgba(colors.accent2, 0.25)));
-  tiled(ctx, env, 20, 110, (x) => spike(x, 60, 110 + ((x | 0) % 4) * 24, 0, hexToRgba(colors.accent2, 0.4)));
+  tiled(ctx, env, 10, 90, (x, idx) => spike(x, 70, 80 + (((idx % 5) + 5) % 5) * 20, 0, hexToRgba(colors.accent2, 0.25)));
+  tiled(ctx, env, 20, 110, (x, idx) => spike(x, 60, 110 + (((idx % 4) + 4) % 4) * 24, 0, hexToRgba(colors.accent2, 0.4)));
   // Cristales flotantes con glow.
-  tiled(ctx, env, 30, 240, (x) => {
-    const cy = H * 0.55 + ((x | 0) % 3) * 30;
+  tiled(ctx, env, 30, 240, (x, idx) => {
+    const cy = H * 0.55 + (((idx % 3) + 3) % 3) * 30;
     ctx.save(); ctx.translate(x, cy); ctx.rotate(0.5);
     ctx.fillStyle = hexToRgba(colors.accent1, 0.35 + pulse * 0.3);
     ctx.fillRect(-8, -16, 16, 32); ctx.restore();

@@ -58,6 +58,7 @@ export class Canvas2DRenderer {
       this._portals(ctx, game, c);
       this._orbsPads(ctx, game, c);
       this._coins(ctx, game, c);
+      this._gems(ctx, game, c);
       this._particles(ctx, game);
       if (!game.player.dead) this._player(ctx, game);
     }
@@ -174,6 +175,26 @@ export class Canvas2DRenderer {
       ctx.fillStyle = c.accent3; ctx.font = `bold ${t * 0.4}px "Press Start 2P", monospace`;
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.shadowBlur = 0;
       ctx.fillText('C', cx, cy + 1);
+      ctx.restore();
+    }
+  }
+
+  _gems(ctx, game, c) {
+    const t = game.tile;
+    const tm = performance.now() / 1000;
+    for (const g of game.world.gems) {
+      if (g.collected) continue;
+      const cx = this.sx(game, g.x + 0.5), cy = this.sy(game, g.y + 0.5);
+      if (cx < -50 || cx > this.W + 50) continue;
+      const sp = 0.5 + 0.5 * Math.sin(tm * 4 + g.x);
+      const r = t * 0.2 * (0.85 + sp * 0.15);
+      ctx.save();
+      ctx.translate(cx, cy + Math.sin(tm * 2 + g.x) * 3);
+      ctx.rotate(tm * 2);
+      ctx.shadowColor = c.accent2; ctx.shadowBlur = 10 + sp * 8;
+      ctx.fillStyle = hexToRgba(c.accent2, 0.9);
+      ctx.beginPath(); ctx.moveTo(0, -r); ctx.lineTo(r * 0.7, 0); ctx.lineTo(0, r); ctx.lineTo(-r * 0.7, 0); ctx.closePath(); ctx.fill();
+      ctx.shadowBlur = 0; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
       ctx.restore();
     }
   }

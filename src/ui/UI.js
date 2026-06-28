@@ -1,6 +1,6 @@
 // UI — gestiona todas las pantallas DOM sobre el canvas.
 import { el, formatPercent } from '../utils/helpers.js';
-import { DIFFICULTY } from '../utils/constants.js';
+import { DIFFICULTY, rankFor } from '../utils/constants.js';
 import { drawAvatarPreview } from '../game/Avatars.js';
 
 export class UI {
@@ -38,6 +38,7 @@ export class UI {
       ? el('div', { style: { display: 'flex', flexDirection: 'column', gap: '14px', alignItems: 'center', marginTop: '18px' } },
           el('button', { class: 'btn', onClick: () => this.showLevelSelect() }, '▶ Jugar'),
           el('button', { class: 'btn secondary', onClick: () => this.showAvatars() }, '🎭 Avatars'),
+          el('button', { class: 'btn gold', onClick: () => this.showPlayerRanking() }, '🏅 Ranking'),
           el('button', { class: 'btn gold', onClick: () => this.showLeaderboardPicker() }, '🏆 Leaderboard'),
           el('button', { class: 'btn secondary', onClick: () => this.showSettings() }, '⚙ Ajustes'),
           el('button', { class: 'btn small secondary', style: { marginTop: '4px', opacity: '0.8' }, onClick: () => this.ctl.exitApp() }, '⏏ Salir del juego'),
@@ -125,19 +126,21 @@ export class UI {
     const attempts = el('div', { class: 'attempts' }, 'Intento 1');
     const modeTag = el('div', { class: 'mode-tag' }, 'CUBE');
     const coins = el('div', { class: 'coins-hud' });
+    const score = el('div', { class: 'score-hud' }, '◆ 0');
     const hud = el('div', { class: 'hud' },
       el('div', { class: 'progress-wrap' }, el('div', { class: 'progress-bar' }, fill), pct),
-      attempts, modeTag, coins,
+      attempts, modeTag, coins, score,
       el('button', { class: 'pause-btn', onClick: () => this.ctl.pause() }, '❚❚'),
     );
     this.root.appendChild(hud);
-    this.hudRefs = { fill, pct, attempts, modeTag, coins, level };
+    this.hudRefs = { fill, pct, attempts, modeTag, coins, score, level };
     if (level.practice) attempts.textContent = 'Práctica';
   }
 
   updateProgress(p) { if (this.hudRefs) { this.hudRefs.fill.style.width = `${p}%`; this.hudRefs.pct.textContent = formatPercent(p); } }
   setAttempts(n) { if (this.hudRefs && !this.hudRefs.level.practice) this.hudRefs.attempts.textContent = `Intento ${n}`; }
   setMode(m) { if (this.hudRefs) this.hudRefs.modeTag.textContent = m.toUpperCase(); }
+  setScore(p) { if (this.hudRefs) this.hudRefs.score.textContent = `◆ ${p}`; }
   setCoins(collected, total) {
     if (!this.hudRefs || !total) return;
     this.hudRefs.coins.innerHTML = '';
@@ -179,9 +182,9 @@ export class UI {
         el('div', { class: 'logo', style: { fontSize: '20px', marginBottom: '14px' } }, level.name),
         el('div', { class: 'stats-grid' },
           stat('Progreso', '100%'),
-          stat('Intentos', result.attempts),
+          stat('Puntos', `+${result.award?.runPoints ?? 0}`),
           stat('Coins', `${result.coins.length}/${totalCoins}`),
-          stat('Dificultad', DIFFICULTY[level.difficulty].label),
+          stat('◆ Gemas', result.gems ?? 0),
         ),
         el('div', { class: 'btn-row' },
           this.ctl.hasNext(level.id) ? el('button', { class: 'btn', onClick: () => this.ctl.nextLevel(level.id) }, '▶ Siguiente') : null,
@@ -218,6 +221,38 @@ export class UI {
         el('span', { class: 'rank' }, `#${i + 1}`),
         el('span', { class: 'name' }, r.displayName || 'Player'),
         el('span', { class: 'pct' }, `${r.completed ? '✔ ' : ''}${formatPercent(r.bestPercent)}`),
+      ));
+    });
+  }
+
+  // ---------- RANKING DE JUGADORES ----------
+  async showPlayerRanking() {
+    this.clear(); this.current = 'ranking';
+    const lp = this.ctl.scores.getLocalPoints();
+    const myRk = rankFor(lp.total);
+    const list = el('div', { class: 'lb-list' }, el('div', { class: 'hint' }, 'Cargando…'));
+    this.root.appendChild(el('div', { class: 'screen' },
+      el('div', { class: 'back-link', onClick: () => this.showMenu() }, '← Menú'),
+      el('div', { class: 'panel' },
+        el('h2', {}, '🏅 Ranking'),
+        el('div', { class: 'stats-grid' },
+          stat('Tus puntos', lp.total || 0),
+          el('div', { class: 'stat' }, el('div', { class: 'label' }, 'Tu rango'), el('div', { class: 'value', style: { color: myRk.color, fontSize: '16px' } }, myRk.name)),
+        ),
+        list,
+        el('button', { class: 'btn secondary', onClick: () => this.showMenu() }, 'Volver'),
+      ),
+    ));
+    const rows = await this.ctl.scores.getPlayerRanking(50);
+    const myUid = this.ctl.getAuth().user?.uid;
+    list.innerHTML = '';
+    if (!rows.length) { list.appendChild(el('div', { class: 'hint' }, '¡Sé el primero! Completa niveles y recoge gemas (◆) para sumar puntos.')); return; }
+    rows.forEach((r, i) => {
+      const rk = rankFor(r.points);
+      list.appendChild(el('div', { class: `lb-row ${r.uid === myUid ? 'me' : ''}` },
+        el('span', { class: 'rank' }, `#${i + 1}`),
+        el('span', { class: 'name' }, r.displayName),
+        el('span', { class: 'pct', style: { color: rk.color } }, `${r.points} pts`),
       ));
     });
   }

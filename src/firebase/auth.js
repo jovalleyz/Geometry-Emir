@@ -49,7 +49,7 @@ export function signOut() { return fbSignOut(auth); }
 
 export function currentUser() { return authState.user; }
 
-function emptyStats() { return { totalAttempts: 0, levelsCompleted: 0, stars: 0, orbs: 0, coins: 0 }; }
+function emptyStats() { return { totalAttempts: 0, completions: 0, points: 0, stars: 0, orbs: 0, coins: 0 }; }
 
 async function ensureProfile(user) {
   if (user.local) return authState.profile;

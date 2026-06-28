@@ -287,6 +287,7 @@ export class AudioManager {
     this._blip(880, 0.07, 'square', 0.2);
     setTimeout(() => this._blip(1320, 0.1, 'square', 0.2), 70);
   }
+  sfxGem() { this._blip(1175, 0.06, 'triangle', 0.16); }
   sfxDeath() {
     this._ensure();
     const t = this.ctx.currentTime;

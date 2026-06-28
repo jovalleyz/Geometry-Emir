@@ -10,8 +10,9 @@ import { Canvas2DRenderer } from './game/Canvas2DRenderer.js';
 import { UI } from './ui/UI.js';
 import { LEVELS, LEVELS_BY_ID } from './levels/official.js';
 import { onAuth, authState, signInWithGoogle, signInGuest, signOut, updateProfileStats } from './firebase/auth.js';
-import { submitScore, getLocalScore, getLeaderboard } from './firebase/scores.js';
+import { submitScore, getLocalScore, getLeaderboard, awardPoints, getPlayerRanking, getLocalPoints } from './firebase/scores.js';
 import { AVATARS, getSelectedAvatar, setSelectedAvatar } from './game/Avatars.js';
+import { POINTS } from './utils/constants.js';
 
 const canvas = document.getElementById('game-canvas');
 const uiRoot = document.getElementById('ui-root');
@@ -54,12 +55,16 @@ const renderer = await createRenderer(canvas);
 // --- Juego con callbacks hacia la UI ---
 const game = new Game(canvas, input, renderer, {
   onProgress: (p) => ui.updateProgress(p),
-  onAttempt: (n) => { ui.setAttempts(n); ui.setCoins(0, totalCoins(currentLevel)); },
+  onAttempt: (n) => { ui.setAttempts(n); ui.setCoins(0, totalCoins(currentLevel)); ui.setScore(0); },
   onMode: (m) => ui.setMode(m),
-  onCoin: (_id, count) => ui.setCoins(count, totalCoins(currentLevel)),
+  onCoin: (_id, count) => { ui.setCoins(count, totalCoins(currentLevel)); ui.setScore(livePoints()); },
+  onGem: () => ui.setScore(livePoints()),
   onComplete: (result) => handleComplete(result),
   onDeath: () => {},
 });
+
+// Puntos en vivo de la partida actual (gemas + monedas recogidas).
+function livePoints() { return (game.gemsRun || 0) * POINTS.gem + (game.coinsCollected?.size || 0) * POINTS.coin; }
 
 // --- Controlador inyectado a la UI ---
 const ctl = {
@@ -69,7 +74,7 @@ const ctl = {
   signInGoogle: signInWithGoogle,
   signInGuest,
   signOut,
-  scores: { getLocalScore, getLeaderboard },
+  scores: { getLocalScore, getLeaderboard, getPlayerRanking, getLocalPoints },
   avatars: AVATARS,
   getAvatar: getSelectedAvatar,
   setAvatar: (id) => { setSelectedAvatar(id); game.avatar = getSelectedAvatar(); },
@@ -83,6 +88,7 @@ const ctl = {
     game.loadLevel(currentLevel, { practice, avatar: getSelectedAvatar() });
     ui.showHUD({ ...currentLevel, practice });
     ui.setCoins(0, totalCoins(currentLevel));
+    ui.setScore(0);
     ui.setMode(game.player.mode);
     game.start();
   },
@@ -141,16 +147,18 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('pagehide', () => { game.stop?.(); audio.stopMusic(); audio.suspend(); });
 
 async function handleComplete(result) {
-  ui.showComplete(result, currentLevel);
+  const award = await awardPoints({
+    levelId: result.levelId, gems: result.gems || 0,
+    coins: result.coins.length, difficulty: result.difficulty,
+  });
+  ui.showComplete({ ...result, award }, currentLevel);
   if (result.coins.length) ui.toast(`◇ ${result.coins.length} coin(s) secreta(s)`);
+  if (award?.runPoints) ui.toast(`+${award.runPoints} pts  (total ${award.total})`);
   const res = await submitScore({
     levelId: result.levelId, percent: 100, completed: true,
     attempts: result.attempts, coins: result.coins,
   });
-  if (res?.ok) ui.toast('Score guardado ☁');
-  // Actualiza stats del perfil.
-  const stars = { easy: 2, normal: 3, hard: 4, harder: 6, insane: 8, demon: 10 }[currentLevel.difficulty] || 1;
-  updateProfileStats({ [`completed.${result.levelId}`]: true }).catch(() => {});
+  if (res?.ok) ui.toast('Guardado ☁');
 }
 
 // --- Game loop (siempre activo; el juego decide qué actualizar) ---

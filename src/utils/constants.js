@@ -55,15 +55,40 @@ export const OBJ = {
   ORB: 'orb',             // jump ring (requiere tap)
   PAD: 'pad',             // jump pad (automático)
   COIN: 'coin',           // moneda secreta
+  GEM: 'gem',             // gema coleccionable (puntos para el ranking)
   PORTAL_MODE: 'portal_mode',
   PORTAL_SPEED: 'portal_speed',
   PORTAL_GRAVITY: 'portal_gravity',
   END: 'end',
 };
 
+// Puntuación: por gema, por moneda secreta y bonus de compleción por dificultad.
+export const POINTS = {
+  gem: 25,
+  coin: 150,
+  completion: { auto: 50, easy: 100, normal: 200, hard: 350, harder: 500, insane: 750, demon: 1200 },
+};
+
+// Rangos de jugador según puntos totales acumulados.
+export const RANKS = [
+  { min: 0, name: 'Novato', color: '#8899BB' },
+  { min: 500, name: 'Aprendiz', color: '#27d07c' },
+  { min: 1500, name: 'Corredor', color: '#3aa0ff' },
+  { min: 3500, name: 'Pro', color: '#ffd83a' },
+  { min: 6500, name: 'Experto', color: '#ff8c3a' },
+  { min: 10000, name: 'Maestro', color: '#ff3a6e' },
+  { min: 16000, name: 'Leyenda', color: '#c23aff' },
+];
+export function rankFor(points) {
+  let r = RANKS[0];
+  for (const x of RANKS) if (points >= x.min) r = x;
+  return r;
+}
+
 export const STORAGE_KEYS = {
   progress: 'geoemir_progress_v1',
   settings: 'geoemir_settings_v1',
   guestId: 'geoemir_guest_v1',
   avatar: 'geoemir_avatar_v1',
+  points: 'geoemir_points_v1',
 };

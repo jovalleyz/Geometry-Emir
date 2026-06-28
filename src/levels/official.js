@@ -231,8 +231,21 @@ function finalRush() {
   };
 }
 
+// Añade gemas coleccionables (puntos) a lo largo del nivel, evitando spikes.
+function withGems(level) {
+  const spikeX = new Set();
+  for (const o of level.objects) if (o.type === 'spike' || o.type === 'spike_s') {
+    for (let dx = -2; dx <= 2; dx++) spikeX.add(Math.round(o.x) + dx);
+  }
+  for (let x = 10; x < level.length - 6; x += 13) {
+    if (spikeX.has(x)) continue;
+    level.objects.push({ type: 'gem', x, y: 1 });
+  }
+  return level;
+}
+
 export const LEVELS = [
   stereoRush(), neonPulse(), voltage(), gravityStorm(), cityLights(),
   stardust(), retrowave(), deepCavern(), tidal(), finalRush(),
-];
+].map(withGems);
 export const LEVELS_BY_ID = Object.fromEntries(LEVELS.map((l) => [l.id, l]));

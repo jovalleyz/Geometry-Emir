@@ -15,6 +15,7 @@ export class LB {
   orb(x, y, color = 'yellow', power = 19.8) { this.objects.push({ type: 'orb', x, y, color, power }); return this; }
   pad(x, y, power = 26) { this.objects.push({ type: 'pad', x, y, power }); return this; }
   coin(x, y, id) { this.objects.push({ type: 'coin', x, y, id }); return this; }
+  gem(x, y = 1) { this.objects.push({ type: 'gem', x, y }); return this; }
 
   mode(x, mode, y = 3) { this.objects.push({ type: 'portal_mode', x, mode, y }); return this; }
   speed(x, speed, y = 4) { this.objects.push({ type: 'portal_speed', x, speed, y }); return this; }

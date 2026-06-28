@@ -96,6 +96,7 @@ html, body {
 .hud .attempts { position: absolute; top: calc(14px + env(safe-area-inset-top)); left: calc(16px + env(safe-area-inset-left)); font-family: var(--mono); font-size: 14px; color: var(--text2); }
 .hud .coins-hud { position: absolute; top: calc(42px + env(safe-area-inset-top)); left: calc(16px + env(safe-area-inset-left)); }
 .hud .mode-tag { position: absolute; top: calc(14px + env(safe-area-inset-top)); right: calc(64px + env(safe-area-inset-right)); font-family: var(--mono); font-size: 13px; color: var(--accent2); text-transform: uppercase; }
+.hud .score-hud { position: absolute; top: calc(60px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); font-family: var(--display); font-size: 13px; color: var(--accent2); text-shadow: 0 0 8px var(--accent2); }
 .pause-btn { position: absolute; top: calc(12px + env(safe-area-inset-top)); right: calc(12px + env(safe-area-inset-right)); width: 44px; height: 44px; border-radius: 10px; background: var(--ui-bg); border: 2px solid var(--accent1); color: var(--accent1); font-size: 18px; cursor: pointer; pointer-events: auto; box-shadow: 0 0 10px rgba(0, 255, 204, 0.3); }
 
 /* ---------- Panels ---------- */

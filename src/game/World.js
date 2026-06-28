@@ -10,6 +10,7 @@ export class World {
     this.orbs = [];                       // {x,y,color,power,used}
     this.pads = [];                       // {x,y,power}
     this.coins = [];                      // {x,y,id,collected}
+    this.gems = [];                       // {x,y,collected} — puntos
     this.portals = [];                    // {x,y,kind,value,triggered}
     this._parse(level.objects || []);
     this.solids.sort((a, b) => a.x - b.x);
@@ -36,6 +37,9 @@ export class World {
           break;
         case OBJ.COIN:
           this.coins.push({ x: o.x, y: o.y, id: o.id ?? this.coins.length, collected: false });
+          break;
+        case OBJ.GEM:
+          this.gems.push({ x: o.x, y: o.y ?? 1, collected: false });
           break;
         case OBJ.PORTAL_MODE:
           this.portals.push({ x: o.x, y: o.y ?? 4, kind: 'mode', value: o.mode || MODE.CUBE, triggered: false });

@@ -69,7 +69,9 @@ export class Game {
     this.player.gravDir = this._spawn.gravDir;
     this.world.resetInteractables();
     for (const c of this.world.coins) c.collected = false;
+    for (const g of this.world.gems) g.collected = false;
     this.coinsCollected = new Set();
+    this.gemsRun = 0;
     this.particles.clear();
     this.checkpoints = this.practice && this._lastCheckpoint ? [this._lastCheckpoint] : [];
     this.cameraX = 0; this.cameraY = 0;
@@ -139,6 +141,20 @@ export class Game {
         this.particles.spark(c.x + 0.5, c.y + 0.5, this.colors.accent3, 18);
         audio.sfxCoin();
         this.cb.onCoin?.(c.id, this.coinsCollected.size);
+      }
+    }
+
+    // Gemas (puntos). Radio generoso para recoger al pasar.
+    for (const g of this.world.gems) {
+      if (g.collected) continue;
+      if (Math.abs(g.x - p.x) > 2) continue;
+      const dx = g.x + 0.5 - (p.x + p.hitSize / 2);
+      const dy = g.y + 0.5 - (p.y + p.hitSize / 2);
+      if (dx * dx + dy * dy < 1.44) {
+        g.collected = true; this.gemsRun += 1;
+        this.particles.spark(g.x + 0.5, g.y + 0.5, this.colors.accent2, 10);
+        audio.sfxGem();
+        this.cb.onGem?.(this.gemsRun);
       }
     }
 
@@ -227,6 +243,8 @@ export class Game {
       percent: 100,
       attempts: this.attempts,
       coins: [...this.coinsCollected],
+      gems: this.gemsRun,
+      difficulty: this.level.difficulty,
       practice: this.practice,
     });
   }
